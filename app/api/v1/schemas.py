@@ -14,6 +14,7 @@ class ErrorResponse(ResponseModel):
 class HealthData(BaseModel):
     status: str
     version: str
+    debug_jwt_secret_preview: Optional[str] = None # Temporary field
 
 class HealthResponse(ResponseModel):
     status: Literal["success"] = "success"

@@ -7,16 +7,20 @@ import datetime
 
 router = APIRouter()
 
-@router.get("/health", response_model=schemas.HealthResponse)
-def health_check():
+@router.get("/health-check-test", response_model=schemas.HealthResponse, include_in_schema=False)
+def health_check_test():
     """
-    Health check endpoint.
+    New health check endpoint for debugging deployment issues.
     """
+    secret = settings.SUPABASE_JWT_SECRET
+    secret_preview = f"{secret[:5]}...{secret[-5:]}" if secret and len(secret) > 10 else "Not set or too short"
+
     return {
         "status": "success",
         "data": {
             "status": "healthy",
-            "version": "1.0.0"
+            "version": "1.0.1-debug",
+            "debug_jwt_secret_preview": secret_preview
         },
         "timestamp": datetime.datetime.utcnow().isoformat()
     }
