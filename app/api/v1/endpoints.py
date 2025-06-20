@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from app.api.v1 import schemas
 from app.core.security import get_current_user
 from app.services.openai_service import openai_service
 from app.core.config import settings
 import datetime
+import asyncio
+import time
 
 router = APIRouter()
 
@@ -17,6 +19,109 @@ def health_check():
         "data": {
             "status": "healthy",
             "version": "1.0.0"
+        },
+        "timestamp": datetime.datetime.utcnow().isoformat()
+    }
+
+@router.post("/analysis/article/sync", response_model=schemas.AnalysisResultsResponse)
+async def analyze_article_sync(
+    request: schemas.AnalyzeArticleRequest = Body(
+        ...,
+        examples={
+            "minimal_analysis": {
+                "summary": "Minimal Analysis (Bias & Fact-Check)",
+                "value": {
+                    "url": "http://example.com/article1",
+                    "content": "A new study published today suggests that eating chocolate every day can lead to significant weight loss. The study, funded by the International Confectioners Guild, followed 50 participants over a two-week period. Critics, however, argue the study's methodology is flawed and the sample size is too small to be conclusive.",
+                    "title": "Daily Chocolate Intake Linked to Weight Loss, Study Finds",
+                    "options": {
+                        "includeBiasAnalysis": True,
+                        "includeFactCheck": True,
+                        "includeContextAnalysis": False,
+                        "includeSummary": False,
+                        "includeExpertOpinion": False,
+                        "includeImpactAssessment": False,
+                    },
+                },
+            },
+            "full_analysis": {
+                "summary": "Full Analysis (All Options)",
+                "value": {
+                    "url": "http://example.com/article2",
+                    "content": "Lawmakers in the state are debating a controversial new bill that would mandate all new vehicle sales be electric by 2035. Proponents claim the move is essential for meeting climate goals and reducing air pollution. Opponents, including automotive industry lobbyists and some consumer groups, warn of skyrocketing vehicle prices, grid instability, and a lack of charging infrastructure, particularly in rural areas.",
+                    "title": "State Debates Landmark Bill to Ban Gas Cars by 2035",
+                    "options": {
+                        "includeBiasAnalysis": True,
+                        "includeFactCheck": True,
+                        "includeContextAnalysis": True,
+                        "includeSummary": True,
+                        "includeExpertOpinion": True,
+                        "includeImpactAssessment": True,
+                    },
+                },
+            },
+        },
+    ),
+    user: dict = Depends(get_current_user),
+):
+    """
+    Submit an article for synchronous analysis.
+    Returns the full analysis results directly.
+    """
+    start_time = time.time()
+    article_content = request.content or "" # Assuming content is provided for now
+
+    if not article_content:
+        # TODO: Implement URL fetching if content is not provided
+        raise HTTPException(status_code=400, detail="Article content is required for now.")
+
+    tasks = {}
+    options_map = {
+        "biasAnalysis": (request.options.includeBiasAnalysis, openai_service.get_bias_analysis),
+        "factCheck": (request.options.includeFactCheck, openai_service.get_fact_check),
+        "contextAnalysis": (request.options.includeContextAnalysis, openai_service.get_context_analysis),
+        "summary": (request.options.includeSummary, openai_service.get_summary),
+        "expertOpinion": (request.options.includeExpertOpinion, openai_service.get_expert_opinion),
+        "impactAssessment": (request.options.includeImpactAssessment, openai_service.get_impact_assessment),
+    }
+
+    for key, (include, method) in options_map.items():
+        if include:
+            tasks[key] = method(article_content)
+
+    # Run tasks concurrently
+    if not tasks:
+        return {
+             "status": "success",
+             "data": {
+                "analysisId": f"sync-{int(start_time)}",
+                "status": "completed",
+                "results": {},
+                "metadata": {
+                    "analyzedAt": datetime.datetime.utcnow().isoformat(),
+                    "processingTime": 0,
+                    "modelVersion": openai_service.model,
+                }
+            },
+            "timestamp": datetime.datetime.utcnow().isoformat()
+        }
+
+    results_values = await asyncio.gather(*tasks.values())
+    results_dict = dict(zip(tasks.keys(), results_values))
+
+    processing_time = time.time() - start_time
+
+    return {
+        "status": "success",
+        "data": {
+            "analysisId": f"sync-{int(start_time)}",
+            "status": "completed",
+            "results": results_dict,
+            "metadata": {
+                "analyzedAt": datetime.datetime.utcnow().isoformat(),
+                "processingTime": round(processing_time, 2),
+                "modelVersion": openai_service.model,
+            }
         },
         "timestamp": datetime.datetime.utcnow().isoformat()
     }

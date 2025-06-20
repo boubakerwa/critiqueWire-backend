@@ -1,19 +1,14 @@
 # Todo List
 
--   [x] **Configuration (`app/core/config.py`):**
-    -   [x] Create a Pydantic `Settings` class to manage environment variables (`OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_JWT_SECRET`).
-    -   [x] Create `.env.example` file.
--   [x] **Authentication (`app/core/security.py`):**
-    -   [x] Implement a dependency to validate Supabase JWTs.
--   [x] **Pydantic Schemas (`app/api/v1/schemas.py`):**
-    -   [x] Define Pydantic models for all API request and response bodies from `docs/api-specification.md`.
--   [x] **OpenAI Service (`app/services/openai_service.py`):**
-    -   [x] Implement placeholder functions for each analysis type.
--   [x] **API Endpoints (`app/api/v1/endpoints.py`):**
-    -   [x] Implement placeholder endpoints for article analysis.
-    -   [x] Implement the `/health` check endpoint.
--   [x] **Main Application (`app/main.py`):**
-    -   [x] Include the v1 API router.
+-   [x] ~~**Initial Project Setup & Dockerization**~~
+-   [x] ~~**Implement & Debug Authentication**~~
+    -   [x] ~~Setup Pydantic `Settings` in `app/core/config.py`.~~
+    -   [x] ~~Create `.env.example` file.~~
+    -   [x] ~~Define Pydantic schemas in `app/api/v1/schemas.py`.~~
+    -   [x] ~~Create placeholder OpenAI service and API endpoints.~~
+    -   [x] ~~Implement dependency to validate Supabase JWTs.~~
+    -   [x] ~~Debug and fix `401 Unauthorized` errors by switching to `supabase-py` validation.~~
+    -   [x] ~~Clean up debug code from endpoints and schemas.~~
 -   [ ] **Refine OpenAI Service:**
     -   [ ] Implement actual OpenAI calls for each analysis type.
     -   [ ] Use OpenAI's JSON mode for reliable output.

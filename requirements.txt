@@ -6,4 +6,7 @@ python-dotenv
 openai
 pyjwt
 supabase
-requests 
+requests
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
