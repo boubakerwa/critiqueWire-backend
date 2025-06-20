@@ -1,23 +1,19 @@
-import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import ValidationError
-
-from app.core.config import settings
+from app.core.config import supabase_client
 
 security = HTTPBearer()
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
     try:
-        payload = jwt.decode(
-            token, settings.SUPABASE_JWT_SECRET, algorithms=["HS256"]
-        )
-        # You can add more validation here if needed, e.g., checking token scope
-        return payload
-    except (jwt.PyJWTError, ValidationError):
+        # Use the Supabase client to validate the token
+        user_response = supabase_client.auth.get_user(token)
+        return user_response.user
+    except Exception as e:
+        # The Supabase client will raise an exception for invalid tokens
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
+            detail=f"Invalid authentication credentials: {e}",
             headers={"WWW-Authenticate": "Bearer"},
         ) 
