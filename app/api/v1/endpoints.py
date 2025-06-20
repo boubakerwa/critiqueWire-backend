@@ -12,15 +12,11 @@ def health_check():
     """
     Health check endpoint.
     """
-    secret = settings.SUPABASE_JWT_SECRET
-    secret_preview = f"{secret[:5]}...{secret[-5:]}" if secret and len(secret) > 10 else "Not set or too short"
-
     return {
         "status": "success",
         "data": {
             "status": "healthy",
-            "version": "1.0.0",
-            "debug_jwt_secret_preview": secret_preview
+            "version": "1.0.0"
         },
         "timestamp": datetime.datetime.utcnow().isoformat()
     }

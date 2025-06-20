@@ -5,6 +5,9 @@ __pycache__/
 # Environment variables
 .env
 
+# Debugging files
+Dockerfile.local
+
 # IDE and editor files
 .vscode/
 .idea/
