@@ -45,42 +45,42 @@ class OpenAIService:
             f"JSON Schema:\n{json.dumps(schema, indent=2)}"
         )
 
-    async def get_bias_analysis(self, text: str) -> schemas.BiasAnalysis | None:
+    async def get_bias_analysis(self, text: str) -> schemas.BiasAnalysisResult | None:
         prompt = self._get_system_prompt(
-            "perform a bias analysis", schemas.BiasAnalysis
+            "perform a bias analysis", schemas.BiasAnalysisResult
         )
-        return await self._analyze(text, prompt, schemas.BiasAnalysis)
+        return await self._analyze(text, prompt, schemas.BiasAnalysisResult)
 
-    async def get_fact_check(self, text: str) -> schemas.FactCheck | None:
+    async def get_fact_check(self, text: str) -> schemas.FactCheckResult | None:
         prompt = self._get_system_prompt(
-            "perform a fact-check", schemas.FactCheck
+            "perform a fact-check", schemas.FactCheckResult
         )
-        return await self._analyze(text, prompt, schemas.FactCheck)
+        return await self._analyze(text, prompt, schemas.FactCheckResult)
 
-    async def get_context_analysis(self, text: str) -> schemas.ContextAnalysis | None:
+    async def get_context_analysis(self, text: str) -> schemas.ContextAnalysisResult | None:
         prompt = self._get_system_prompt(
-            "perform a contextual analysis", schemas.ContextAnalysis
+            "perform a contextual analysis", schemas.ContextAnalysisResult
         )
-        return await self._analyze(text, prompt, schemas.ContextAnalysis)
+        return await self._analyze(text, prompt, schemas.ContextAnalysisResult)
 
-    async def get_summary(self, text: str) -> schemas.Summary | None:
+    async def get_summary(self, text: str) -> schemas.SummaryResult | None:
         prompt = self._get_system_prompt(
-            "provide a comprehensive summary", schemas.Summary
+            "provide a comprehensive summary", schemas.SummaryResult
         )
-        return await self._analyze(text, prompt, schemas.Summary)
+        return await self._analyze(text, prompt, schemas.SummaryResult)
 
-    async def get_expert_opinion(self, text: str) -> schemas.ExpertOpinion | None:
+    async def get_expert_opinion(self, text: str) -> schemas.ExpertOpinionResult | None:
         prompt = self._get_system_prompt(
             "provide an expert opinion as if you were a domain expert on the topic",
-            schemas.ExpertOpinion,
+            schemas.ExpertOpinionResult,
         )
-        return await self._analyze(text, prompt, schemas.ExpertOpinion)
+        return await self._analyze(text, prompt, schemas.ExpertOpinionResult)
 
-    async def get_impact_assessment(self, text: str) -> schemas.ImpactAssessment | None:
+    async def get_impact_assessment(self, text: str) -> schemas.ImpactAssessmentResult | None:
         prompt = self._get_system_prompt(
             "provide a detailed impact assessment",
-            schemas.ImpactAssessment,
+            schemas.ImpactAssessmentResult,
         )
-        return await self._analyze(text, prompt, schemas.ImpactAssessment)
+        return await self._analyze(text, prompt, schemas.ImpactAssessmentResult)
 
 openai_service = OpenAIService() 

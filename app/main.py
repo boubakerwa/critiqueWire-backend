@@ -3,7 +3,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import endpoints as api_v1
 from app.core.config import settings
 
-app = FastAPI(title="CritiqueWire Backend")
+# Define common error responses for the OpenAPI schema
+responses = {
+    401: {"description": "Authentication failed or was not provided."},
+    403: {"description": "The authenticated user is not permitted to perform this action."},
+    404: {"description": "The requested resource was not found."},
+    422: {"description": "Input validation failed."},
+}
+
+app = FastAPI(
+    title="CritiqueWire Backend",
+    responses=responses
+)
 
 # Configure CORS
 app.add_middleware(

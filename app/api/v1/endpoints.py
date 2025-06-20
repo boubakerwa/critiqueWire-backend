@@ -6,6 +6,7 @@ from app.core.config import settings
 import datetime
 import asyncio
 import time
+from typing import List
 
 router = APIRouter()
 
@@ -120,12 +121,15 @@ async def analyze_article_sync(
 
     processing_time = time.time() - start_time
 
+    # Construct the final results object using the refined schema
+    final_results = schemas.AnalysisResultTypes(**results_dict)
+
     return {
         "status": "success",
         "data": {
             "analysisId": f"sync-{int(start_time)}",
             "status": "completed",
-            "results": results_dict,
+            "results": final_results,
             "metadata": {
                 "analyzedAt": datetime.datetime.utcnow().isoformat(),
                 "processingTime": round(processing_time, 2),
@@ -182,4 +186,53 @@ async def get_analysis_results(
             }
         },
         "timestamp": datetime.datetime.utcnow().isoformat()
+    }
+
+# --- User Data Endpoints (Placeholders) ---
+
+@router.get("/bookmarks", response_model=List[schemas.Bookmark], tags=["User Data"])
+async def list_user_bookmarks(user: dict = Depends(get_current_user)):
+    # Placeholder
+    return []
+
+@router.post("/bookmarks", response_model=schemas.Bookmark, status_code=201, tags=["User Data"])
+async def create_bookmark(request: schemas.CreateBookmarkRequest, user: dict = Depends(get_current_user)):
+    # Placeholder
+    return {
+        "id": "mock-bookmark-id",
+        "user_id": user.id,
+        "article_id": request.article_id,
+        "created_at": datetime.datetime.utcnow()
+    }
+
+@router.delete("/bookmarks/{bookmark_id}", status_code=204, tags=["User Data"])
+async def delete_bookmark(bookmark_id: str, user: dict = Depends(get_current_user)):
+    # Placeholder
+    return
+
+@router.get("/analyses", response_model=List[schemas.AnalysisRecord], tags=["User Data"])
+async def list_user_analyses(user: dict = Depends(get_current_user)):
+    # Placeholder
+    return []
+
+@router.get("/profile", response_model=schemas.UserProfile, tags=["User Data"])
+async def get_user_profile(user: dict = Depends(get_current_user)):
+    # Placeholder
+    return {
+        "id": user.id,
+        "username": "mock_username",
+        "full_name": "Mock User",
+        "avatar_url": "http://example.com/avatar.png",
+        "updated_at": datetime.datetime.utcnow()
+    }
+
+@router.patch("/profile", response_model=schemas.UserProfile, tags=["User Data"])
+async def update_user_profile(request: schemas.UpdateUserProfileRequest, user: dict = Depends(get_current_user)):
+    # Placeholder
+    return {
+        "id": user.id,
+        "username": request.username or "mock_username",
+        "full_name": request.full_name or "Mock User",
+        "avatar_url": request.avatar_url or "http://example.com/avatar.png",
+        "updated_at": datetime.datetime.utcnow()
     } 

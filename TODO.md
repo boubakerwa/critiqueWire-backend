@@ -12,9 +12,19 @@
 -   [x] ~~**Refine OpenAI Service:**~~
     -   [x] ~~Implement actual OpenAI calls for each analysis type.~~
     -   [x] ~~Use OpenAI's JSON mode for reliable output.~~
--   [ ] **Refine Endpoints:**
-    -   [ ] Implement asynchronous task handling for analysis.
-    -   [ ] Implement all remaining endpoints from the specification.
+-   [x] ~~**Implement Core OpenAI Service**~~
+-   [x] ~~**Implement Frontend API Refinements (v0.1)**~~
+    -   [x] ~~Implement strongly-typed analysis result schemas.~~
+    -   [x] ~~Add placeholder endpoints for user profile, bookmarks, and analysis history.~~
+    -   [x] ~~Add comprehensive error documentation to OpenAPI spec.~~
+-   [ ] **Implement User-Specific Endpoint Logic:**
+    -   [ ] Connect `/profile` endpoints to a database.
+    -   [ ] Connect `/bookmarks` endpoints to a database.
+    -   [ ] Connect `/analyses` endpoints to a database.
+-   [ ] **Implement Asynchronous Analysis:**
+    -   [ ] Replace `/analysis/article/sync` with a true background task system.
+    -   [ ] The `/analysis/article` endpoint should trigger the background task.
+    -   [ ] The `/analysis/{analysis_id}` endpoint should retrieve results from the database.
 -   [ ] **Refine Dockerfile:**
     -   [ ] Consider multi-stage builds for a smaller production image.
 -   [ ] **Testing:**
