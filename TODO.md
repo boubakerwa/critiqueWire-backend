@@ -9,9 +9,9 @@
     -   [x] ~~Implement dependency to validate Supabase JWTs.~~
     -   [x] ~~Debug and fix `401 Unauthorized` errors by switching to `supabase-py` validation.~~
     -   [x] ~~Clean up debug code from endpoints and schemas.~~
--   [ ] **Refine OpenAI Service:**
-    -   [ ] Implement actual OpenAI calls for each analysis type.
-    -   [ ] Use OpenAI's JSON mode for reliable output.
+-   [x] ~~**Refine OpenAI Service:**~~
+    -   [x] ~~Implement actual OpenAI calls for each analysis type.~~
+    -   [x] ~~Use OpenAI's JSON mode for reliable output.~~
 -   [ ] **Refine Endpoints:**
     -   [ ] Implement asynchronous task handling for analysis.
     -   [ ] Implement all remaining endpoints from the specification.

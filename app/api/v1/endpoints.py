@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException
 from app.api.v1 import schemas
 from app.core.security import get_current_user
 from app.services.openai_service import openai_service
@@ -23,45 +23,54 @@ def health_check():
         "timestamp": datetime.datetime.utcnow().isoformat()
     }
 
-@router.post("/analysis/article/sync", response_model=schemas.AnalysisResultsResponse)
+@router.post(
+    "/analysis/article/sync",
+    response_model=schemas.AnalysisResultsResponse,
+    openapi_extra={
+        "requestBody": {
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "minimal_analysis": {
+                            "summary": "Minimal Analysis (Bias & Fact-Check)",
+                            "value": {
+                                "url": "http://example.com/article1",
+                                "content": "A new study published today suggests that eating chocolate every day can lead to significant weight loss. The study, funded by the International Confectioners Guild, followed 50 participants over a two-week period. Critics, however, argue the study's methodology is flawed and the sample size is too small to be conclusive.",
+                                "title": "Daily Chocolate Intake Linked to Weight Loss, Study Finds",
+                                "options": {
+                                    "includeBiasAnalysis": True,
+                                    "includeFactCheck": True,
+                                    "includeContextAnalysis": False,
+                                    "includeSummary": False,
+                                    "includeExpertOpinion": False,
+                                    "includeImpactAssessment": False,
+                                },
+                            },
+                        },
+                        "full_analysis": {
+                            "summary": "Full Analysis (All Options)",
+                            "value": {
+                                "url": "http://example.com/article2",
+                                "content": "Lawmakers in the state are debating a controversial new bill that would mandate all new vehicle sales be electric by 2035. Proponents claim the move is essential for meeting climate goals and reducing air pollution. Opponents, including automotive industry lobbyists and some consumer groups, warn of skyrocketing vehicle prices, grid instability, and a lack of charging infrastructure, particularly in rural areas.",
+                                "title": "State Debates Landmark Bill to Ban Gas Cars by 2035",
+                                "options": {
+                                    "includeBiasAnalysis": True,
+                                    "includeFactCheck": True,
+                                    "includeContextAnalysis": True,
+                                    "includeSummary": True,
+                                    "includeExpertOpinion": True,
+                                    "includeImpactAssessment": True,
+                                },
+                            },
+                        },
+                    }
+                }
+            }
+        }
+    },
+)
 async def analyze_article_sync(
-    request: schemas.AnalyzeArticleRequest = Body(
-        ...,
-        examples={
-            "minimal_analysis": {
-                "summary": "Minimal Analysis (Bias & Fact-Check)",
-                "value": {
-                    "url": "http://example.com/article1",
-                    "content": "A new study published today suggests that eating chocolate every day can lead to significant weight loss. The study, funded by the International Confectioners Guild, followed 50 participants over a two-week period. Critics, however, argue the study's methodology is flawed and the sample size is too small to be conclusive.",
-                    "title": "Daily Chocolate Intake Linked to Weight Loss, Study Finds",
-                    "options": {
-                        "includeBiasAnalysis": True,
-                        "includeFactCheck": True,
-                        "includeContextAnalysis": False,
-                        "includeSummary": False,
-                        "includeExpertOpinion": False,
-                        "includeImpactAssessment": False,
-                    },
-                },
-            },
-            "full_analysis": {
-                "summary": "Full Analysis (All Options)",
-                "value": {
-                    "url": "http://example.com/article2",
-                    "content": "Lawmakers in the state are debating a controversial new bill that would mandate all new vehicle sales be electric by 2035. Proponents claim the move is essential for meeting climate goals and reducing air pollution. Opponents, including automotive industry lobbyists and some consumer groups, warn of skyrocketing vehicle prices, grid instability, and a lack of charging infrastructure, particularly in rural areas.",
-                    "title": "State Debates Landmark Bill to Ban Gas Cars by 2035",
-                    "options": {
-                        "includeBiasAnalysis": True,
-                        "includeFactCheck": True,
-                        "includeContextAnalysis": True,
-                        "includeSummary": True,
-                        "includeExpertOpinion": True,
-                        "includeImpactAssessment": True,
-                    },
-                },
-            },
-        },
-    ),
+    request: schemas.AnalyzeArticleRequest,
     user: dict = Depends(get_current_user),
 ):
     """
