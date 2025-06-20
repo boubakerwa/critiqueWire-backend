@@ -66,6 +66,29 @@ uvicorn app.main:app --reload
 
 The API will be available at `http://localhost:8000`.
 
+## Docker & Render Deployment
+
+This application is configured for deployment using Docker.
+
+1.  **Build the Docker image:**
+
+    ```bash
+    docker build -t critiquewire-backend .
+    ```
+
+2.  **Run the Docker container:**
+
+    ```bash
+    docker run -d -p 8000:8000 --env-file .env critiquewire-backend
+    ```
+
+### Deployment on Render
+
+This project is ready to be deployed on Render. You can connect your GitHub repository to Render and create a new "Web Service". Render will automatically detect the `Dockerfile` and build and deploy the application.
+
+-   **Runtime**: Docker
+-   **Environment Variables**: You will need to add the same environment variables from your `.env` file to the Render service configuration.
+
 ## API Documentation
 
 The full API specification, including detailed request and response models, is available in the `docs/api-specification.md` file. The interactive API documentation (Swagger UI) is available at `http://localhost:8000/docs` when the application is running.
