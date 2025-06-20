@@ -1,0 +1,26 @@
+# Todo List
+
+-   [x] **Configuration (`app/core/config.py`):**
+    -   [x] Create a Pydantic `Settings` class to manage environment variables (`OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_JWT_SECRET`).
+    -   [x] Create `.env.example` file.
+-   [x] **Authentication (`app/core/security.py`):**
+    -   [x] Implement a dependency to validate Supabase JWTs.
+-   [x] **Pydantic Schemas (`app/api/v1/schemas.py`):**
+    -   [x] Define Pydantic models for all API request and response bodies from `docs/api-specification.md`.
+-   [x] **OpenAI Service (`app/services/openai_service.py`):**
+    -   [x] Implement placeholder functions for each analysis type.
+-   [x] **API Endpoints (`app/api/v1/endpoints.py`):**
+    -   [x] Implement placeholder endpoints for article analysis.
+    -   [x] Implement the `/health` check endpoint.
+-   [x] **Main Application (`app/main.py`):**
+    -   [x] Include the v1 API router.
+-   [ ] **Refine OpenAI Service:**
+    -   [ ] Implement actual OpenAI calls for each analysis type.
+    -   [ ] Use OpenAI's JSON mode for reliable output.
+-   [ ] **Refine Endpoints:**
+    -   [ ] Implement asynchronous task handling for analysis.
+    -   [ ] Implement all remaining endpoints from the specification.
+-   [ ] **Refine Dockerfile:**
+    -   [ ] Consider multi-stage builds for a smaller production image.
+-   [ ] **Testing:**
+    -   [ ] Add unit and integration tests for the API. 
