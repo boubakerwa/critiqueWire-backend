@@ -1,4 +1,5 @@
 import os
+import requests
 from dotenv import load_dotenv
 from supabase import create_client, Client
 import getpass
@@ -40,10 +41,46 @@ def main():
         print("You can now paste this token into the Swagger UI.")
         print("="*50)
 
+        # --- Test the API endpoint ---
+        test_api_endpoint(jwt)
+
     except Exception as e:
         print(f"\nAn error occurred: {e}")
         print("Please check your credentials and Supabase project settings.")
 
+def test_api_endpoint(token: str):
+    """
+    Uses the provided JWT to make a test request to the analysis endpoint.
+    """
+    print("\n--- Testing API Endpoint ---")
+    url = "https://critiquewire-backend.onrender.com/v1/analysis/article"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+      "url": "http://example.com/article",
+      "title": "Test Article",
+      "options": {
+        "includeBiasAnalysis": True,
+        "includeFactCheck": False,
+        "includeContextAnalysis": False,
+        "includeSummary": True,
+        "includeExpertOpinion": False,
+        "includeImpactAssessment": False
+      }
+    }
+
+    print(f"Making POST request to: {url}")
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=15)
+        print(f"Response Status Code: {response.status_code}")
+        print("Response Body:")
+        print(response.json())
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred while making the request: {e}")
+    finally:
+        print("--------------------------")
 
 if __name__ == "__main__":
     main() 
