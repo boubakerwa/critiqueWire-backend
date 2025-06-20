@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.api.v1 import schemas
 from app.core.security import get_current_user
 from app.services.openai_service import openai_service
+from app.core.config import settings
 import datetime
 
 router = APIRouter()
@@ -11,11 +12,15 @@ def health_check():
     """
     Health check endpoint.
     """
+    secret = settings.SUPABASE_JWT_SECRET
+    secret_preview = f"{secret[:5]}...{secret[-5:]}" if secret and len(secret) > 10 else "Not set or too short"
+
     return {
         "status": "success",
         "data": {
             "status": "healthy",
-            "version": "1.0.0"
+            "version": "1.0.0",
+            "debug_jwt_secret_preview": secret_preview
         },
         "timestamp": datetime.datetime.utcnow().isoformat()
     }
