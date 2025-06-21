@@ -4,6 +4,10 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 import getpass
 
+# --- ADDED: Hardcoded credentials for automation ---
+HARDCODED_EMAIL = "boubaker.wa@hotmail.de"
+HARDCODED_PASSWORD = "123123123"
+
 def main():
     """
     Connects to Supabase and retrieves a JWT for a user.
@@ -21,10 +25,9 @@ def main():
     # Create a Supabase client
     supabase: Client = create_client(url, key)
 
-    # Get user credentials
-    print("Enter your Supabase test user credentials to get a JWT.")
-    email = input("Email: ")
-    password = getpass.getpass("Password: ")
+    # --- Use hardcoded credentials ---
+    email = HARDCODED_EMAIL
+    password = HARDCODED_PASSWORD
 
     try:
         # Sign in the user
@@ -41,8 +44,13 @@ def main():
         print("You can now paste this token into the Swagger UI.")
         print("="*50)
 
+        # --- Write JWT to tmp_jwt.txt ---
+        with open("tmp_jwt.txt", "w") as f:
+            f.write(jwt)
+        print("\nJWT token saved to tmp_jwt.txt\n")
+
         # --- Test the API endpoint ---
-        test_api_endpoint(jwt)
+        # test_api_endpoint(jwt)  # Optionally comment out to avoid test call
 
     except Exception as e:
         print(f"\nAn error occurred: {e}")
