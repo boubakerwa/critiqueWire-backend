@@ -185,8 +185,8 @@ class AnalysisHistoryItem(BaseModel):
 
 class PaginatedAnalysisHistoryResponse(BaseModel):
     items: List[AnalysisHistoryItem]
-    next_cursor: Optional[str] = None
-    total_count: int
+    nextCursor: Optional[str] = None
+    totalCount: int
 
 # --- Export & Share Functionality ---
 
@@ -300,7 +300,7 @@ class FactCheckClaim(BaseModel):
     source: Optional[str] = Field(None, description="A URL to a source validating the verdict.")
     explanation: Optional[str] = Field(None, description="A brief explanation of the fact-check.")
 
-class LegacyFactCheckResult(BaseModel):
+class FactCheckResultLegacy(BaseModel):
     claims: List[FactCheckClaim]
 
 class ContextRelatedEvent(BaseModel):
@@ -332,21 +332,21 @@ class ImpactAssessmentResult(BaseModel):
 class AnalysisResultTypes(BaseModel):
     """Contains results for the requested analysis types. A key is only present if its corresponding option was true in the request."""
     biasAnalysis: Optional[BiasAnalysisResult] = None
-    factCheck: Optional[LegacyFactCheckResult] = None
+    factCheck: Optional[FactCheckResultLegacy] = None
     contextAnalysis: Optional[ContextAnalysisResult] = None
     summary: Optional[SummaryResult] = None
     expertOpinion: Optional[ExpertOpinionResult] = None
     impactAssessment: Optional[ImpactAssessmentResult] = None
 
-class LegacyAnalysisResultsData(BaseModel):
+class AnalysisResultsDataLegacy(BaseModel):
     analysisId: str
     status: Literal["completed"]
     results: AnalysisResultTypes
     metadata: dict
 
-class LegacyAnalysisResultsResponse(ResponseModel):
+class AnalysisResultsResponseLegacy(ResponseModel):
     status: Literal["success"] = "success"
-    data: LegacyAnalysisResultsData
+    data: AnalysisResultsDataLegacy
 
 # --- User Data Schemas (from FE feedback) ---
 
@@ -367,16 +367,16 @@ class AnalysisRecord(BaseModel):
     created_at: datetime.datetime
 
 class UserProfile(BaseModel):
-    id: str # Should be UUID
+    id: str # Should be UUID, but keeping as string for now
     username: str
-    full_name: Optional[str] = None
-    avatar_url: Optional[str] = None
-    updated_at: Optional[datetime.datetime] = None
+    fullName: Optional[str] = None
+    avatarUrl: Optional[str] = None
+    updatedAt: Optional[datetime.datetime] = None
 
 class UpdateUserProfileRequest(BaseModel):
     username: Optional[str] = None
-    full_name: Optional[str] = None
-    avatar_url: Optional[str] = None
+    fullName: Optional[str] = None
+    avatarUrl: Optional[str] = None
 
 # Follow-up Questions
 class Question(BaseModel):

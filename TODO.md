@@ -69,6 +69,33 @@
     -   [x] ~~Clear, descriptive endpoint names~~
     -   [x] ~~Self-documenting schema names~~
 
+## **✅ COMPLETED: OpenAPI v0.4 User Stories**
+-   [x] ~~**Unified Analysis Endpoint (v0.4 #1):**~~
+    -   [x] ~~Create single `POST /v1/analyses` endpoint for all analysis types~~
+    -   [x] ~~Support both URL and text content analysis~~
+    -   [x] ~~Configurable analysis options and presets~~
+-   [x] ~~**Consistent Analysis Response Model (v0.4 #2):**~~
+    -   [x] ~~All endpoints return same `AnalysisResultsResponse` structure~~
+    -   [x] ~~Unified schema with optional results for async mode~~
+    -   [x] ~~Consistent metadata and status fields~~
+-   [x] ~~**Asynchronous by Default (v0.4 #3):**~~
+    -   [x] ~~`async_mode: true` is the default~~
+    -   [x] ~~Returns immediate task ID with `status: "pending"`~~
+    -   [x] ~~Sync mode available when `async_mode: false`~~
+-   [x] ~~**Consistent API Naming Conventions (v0.4 #4):**~~
+    -   [x] ~~All properties use `camelCase` consistently~~
+    -   [x] ~~No more mixed naming like `analysisId` vs `next_cursor`~~
+-   [x] ~~**Clear and Unambiguous Naming (v0.4 #5):**~~
+    -   [x] ~~Removed confusing "Legacy" prefixes~~
+    -   [x] ~~Clear, descriptive endpoint names~~
+    -   [x] ~~Self-documenting schema names~~
+-   [x] ~~**Unified Fact-Check Result Models (v0.4 #6):**~~
+    -   [x] ~~Implement unified fact-check result models~~
+-   [x] ~~**Added `GET /v1/analyses/{analysis_id}` Endpoint (v0.4 #7):**~~
+    -   [x] ~~Add `GET /v1/analyses/{analysis_id}` endpoint for new unified format~~
+-   [x] ~~**Consolidated Redundant Endpoints (v0.4 #8):**~~
+    -   [x] ~~Consolidate redundant endpoints (kept legacy for backward compatibility)~~
+
 ## **🚀 CURRENT PRIORITY: Phase 3 - Database Integration & Persistence**
 
 ### **High Priority - Background Task System**
@@ -121,7 +148,7 @@
     -   [ ] Add integration tests for the complete analysis pipeline
     -   [ ] Add performance tests for large-scale analysis operations
 -   [ ] **Documentation & Deployment:**
-    -   [ ] Update API documentation with all v0.3 features
+    -   [ ] Update API documentation with all v0.4 features
     -   [ ] Refine Dockerfile for production optimization
     -   [ ] Set up CI/CD pipeline for automated testing and deployment
 
@@ -137,4 +164,71 @@
 - Unified endpoint `POST /v1/analyses` is fully functional
 - Async by default keeps UI responsive
 - Consistent response format simplifies state management
-- All v0.3 User Stories completed and tested 
+- All v0.4 User Stories completed and tested 
+
+## 🔄 Current Priorities
+
+### High Priority
+1. **Background Task System**
+   - Implement proper async task queue (Celery/Redis)
+   - Real-time status updates via WebSocket
+   - Task progress tracking and cancellation
+
+2. **Database Integration**
+   - PostgreSQL schema design
+   - User management and authentication persistence
+   - Analysis history storage and retrieval
+   - Preset management with user ownership
+
+3. **URL Content Extraction**
+   - Robust web scraping with fallbacks
+   - Content cleaning and normalization
+   - Metadata extraction (author, date, etc.)
+
+### Medium Priority
+4. **Real-time Status Updates**
+   - WebSocket implementation for live progress
+   - Analysis status notifications
+   - Real-time collaboration features
+
+5. **Caching & Performance**
+   - Redis caching for analysis results
+   - Rate limiting and API quotas
+   - Response optimization
+
+6. **Enhanced Analysis Features**
+   - Multi-language support
+   - Advanced fact-checking with multiple sources
+   - Sentiment analysis improvements
+   - Bias detection refinements
+
+### Low Priority
+7. **Production Readiness**
+   - Docker containerization
+   - Environment configuration management
+   - Logging and monitoring setup
+   - Health checks and metrics
+
+8. **API Documentation**
+   - OpenAPI specification updates
+   - Interactive documentation improvements
+   - Code examples and tutorials
+
+## 🚀 Future Enhancements
+
+### Advanced Features
+- **Collaborative Analysis**: Team workspaces and shared analyses
+- **AI Chat Integration**: Interactive analysis discussions
+- **Custom Analysis Templates**: User-defined analysis workflows
+- **Integration APIs**: Third-party service connections
+- **Mobile API**: Optimized endpoints for mobile apps
+
+### Analytics & Insights
+- **Usage Analytics**: Track analysis patterns and preferences
+- **Performance Metrics**: Monitor analysis quality and speed
+- **User Behavior Analysis**: Understand feature usage patterns
+
+### Security & Compliance
+- **Data Privacy**: GDPR compliance and data retention policies
+- **Access Control**: Fine-grained permissions and role management
+- **Audit Logging**: Comprehensive activity tracking 

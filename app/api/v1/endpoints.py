@@ -356,11 +356,11 @@ async def get_analysis_history(
     if end_index < total_count:
         next_cursor = "next-cursor"  # In real implementation, encode the next position
     
-    return schemas.PaginatedAnalysisHistoryResponse(
-        items=items,
-        next_cursor=next_cursor,
-        total_count=total_count
-    )
+    return {
+        "items": items,
+        "nextCursor": next_cursor,
+        "totalCount": total_count
+    }
 
 # --- Export & Share Functionality ---
 
@@ -558,7 +558,7 @@ async def create_analysis_preset(
 
 @router.post(
     "/analysis/article/sync",
-    response_model=schemas.LegacyAnalysisResultsResponse,
+    response_model=schemas.AnalysisResultsResponseLegacy,
     openapi_extra={
         "requestBody": {
             "content": {
@@ -691,30 +691,123 @@ async def analyze_article(
         "timestamp": datetime.datetime.utcnow().isoformat()
     }
 
-@router.get("/analysis/{analysis_id}", response_model=schemas.LegacyAnalysisResultsResponse)
+@router.get("/analysis/{analysis_id}", response_model=schemas.AnalysisResultsResponseLegacy)
 async def get_analysis_results(
     analysis_id: str,
     user: dict = Depends(get_current_user)
 ):
     """
-    Retrieve analysis results.
+    Get analysis results for a specific analysis ID (legacy format).
     """
-    # This is a placeholder response. In a real application,
-    # you would fetch the results from a database or cache.
+    # Placeholder implementation
     return {
         "status": "success",
         "data": {
             "analysisId": analysis_id,
             "status": "completed",
             "results": {
-                "biasAnalysis": await openai_service.get_bias_analysis("..."),
-                "factCheck": await openai_service.get_fact_check("...")
+                "biasAnalysis": {
+                    "score": 0.3,
+                    "leaning": "center",
+                    "summary": "The article shows minimal bias.",
+                    "details": []
+                },
+                "factCheck": {
+                    "claims": [
+                        {
+                            "claim": "Sample claim",
+                            "verdict": "verified",
+                            "source": "https://example.com",
+                            "explanation": "This claim has been verified."
+                        }
+                    ]
+                }
             },
             "metadata": {
-                "analyzedAt": datetime.datetime.utcnow().isoformat(),
-                "processingTime": 30,
-                "modelVersion": "gpt-4o-mini",
-                "confidenceScore": 0.95
+                "processingTime": 2.5,
+                "preset": "general",
+                "wordsAnalyzed": 500
+            }
+        },
+        "timestamp": datetime.datetime.utcnow().isoformat()
+    }
+
+@router.get("/analyses/{analysis_id}", response_model=schemas.AnalysisResultsResponse)
+async def get_unified_analysis_results(
+    analysis_id: str,
+    user: dict = Depends(get_current_user)
+):
+    """
+    Get analysis results for a specific analysis ID (unified format).
+    This endpoint returns results in the new comprehensive format.
+    """
+    # Placeholder implementation - in real app, this would fetch from database
+    return {
+        "status": "success",
+        "data": {
+            "analysisId": analysis_id,
+            "articleId": "article-123",
+            "analysisType": "url",
+            "status": "completed",
+            "results": {
+                "executiveSummary": "This analysis found moderate bias and verified several key claims.",
+                "biasAnalysis": {
+                    "score": 0.3,
+                    "leaning": "center",
+                    "summary": "The article shows minimal bias.",
+                    "details": []
+                },
+                "sentimentAnalysis": {
+                    "overallSentiment": "neutral",
+                    "confidence": 0.8,
+                    "emotionalTone": ["objective", "analytical"]
+                },
+                "claimsExtracted": [
+                    {
+                        "id": "claim-1",
+                        "statement": "Sample claim statement",
+                        "context": "Context of the claim",
+                        "importance": "high",
+                        "category": "factual"
+                    }
+                ],
+                "factCheckResults": [
+                    {
+                        "claimId": "claim-1",
+                        "status": "verified",
+                        "confidence": 0.9,
+                        "sources": [
+                            {
+                                "name": "Reliable Source",
+                                "url": "https://example.com/verification",
+                                "credibilityScore": 95.0
+                            }
+                        ],
+                        "explanation": "This claim has been verified by multiple sources."
+                    }
+                ],
+                "sourceCredibility": {
+                    "url": "https://example.com/article",
+                    "domain": "example.com",
+                    "credibilityScore": 85.0,
+                    "assessment": "credible",
+                    "factors": {
+                        "transparency": 80.0,
+                        "accuracy": 90.0,
+                        "bias": 75.0,
+                        "ownership": 85.0,
+                        "expertise": 80.0
+                    },
+                    "report": "This source demonstrates good credibility with transparent reporting.",
+                    "lastUpdated": datetime.datetime.utcnow()
+                },
+                "analysisScore": 82.5
+            },
+            "metadata": {
+                "processingTime": 2.5,
+                "preset": "general",
+                "wordsAnalyzed": 500,
+                "createdAt": datetime.datetime.utcnow()
             }
         },
         "timestamp": datetime.datetime.utcnow().isoformat()
@@ -744,24 +837,30 @@ async def delete_bookmark(bookmark_id: str, user: dict = Depends(get_current_use
 
 @router.get("/profile", response_model=schemas.UserProfile, tags=["User Data"])
 async def get_user_profile(user: dict = Depends(get_current_user)):
-    # Placeholder
+    """
+    Get user profile information.
+    """
+    # Placeholder implementation
     return {
-        "id": user.get("user_id", "user-123"),
-        "username": user.get("username", "testuser"),
-        "full_name": user.get("full_name"),
-        "avatar_url": user.get("avatar_url"),
-        "updated_at": datetime.datetime.utcnow()
+        "id": getattr(user, 'id', 'user-123'),
+        "username": getattr(user, 'email', 'testuser').split('@')[0],
+        "fullName": "Test User",
+        "avatarUrl": "https://example.com/avatar.jpg",
+        "updatedAt": datetime.datetime.utcnow()
     }
 
 @router.patch("/profile", response_model=schemas.UserProfile, tags=["User Data"])
 async def update_user_profile(request: schemas.UpdateUserProfileRequest, user: dict = Depends(get_current_user)):
-    # Placeholder
+    """
+    Update user profile information.
+    """
+    # Placeholder implementation
     return {
-        "id": user.get("user_id", "user-123"),
-        "username": request.username or user.get("username", "testuser"),
-        "full_name": request.full_name or user.get("full_name"),
-        "avatar_url": request.avatar_url or user.get("avatar_url"),
-        "updated_at": datetime.datetime.utcnow()
+        "id": getattr(user, 'id', 'user-123'),
+        "username": request.username or getattr(user, 'email', 'testuser').split('@')[0],
+        "fullName": request.fullName or "Test User",
+        "avatarUrl": request.avatarUrl or "https://example.com/avatar.jpg",
+        "updatedAt": datetime.datetime.utcnow()
     }
 
 # --- Unified Analysis Endpoint (v0.3) ---

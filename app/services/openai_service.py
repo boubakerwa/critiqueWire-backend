@@ -71,11 +71,11 @@ class OpenAIService:
         )
         return await self._analyze(text, prompt, schemas.BiasAnalysisResult)
 
-    async def get_fact_check(self, text: str) -> Union[schemas.LegacyFactCheckResult, None]:
+    async def get_fact_check(self, text: str) -> Union[schemas.FactCheckResultLegacy, None]:
         prompt = self._get_system_prompt(
-            "perform a fact-check", schemas.LegacyFactCheckResult
+            "perform a fact-check", schemas.FactCheckResultLegacy
         )
-        return await self._analyze(text, prompt, schemas.LegacyFactCheckResult)
+        return await self._analyze(text, prompt, schemas.FactCheckResultLegacy)
 
     async def get_context_analysis(self, text: str) -> Union[schemas.ContextAnalysisResult, None]:
         prompt = self._get_system_prompt(
