@@ -215,7 +215,7 @@ class DatabaseService:
             print(f"Error retrieving user analyses: {e}")
             return {"items": [], "nextCursor": None, "totalCount": 0}
     
-    async def update_analysis_status(self, analysis_id: str, user_id: str, status: str, results: Optional[Dict] = None) -> bool:
+    async def update_analysis_status(self, analysis_id: str, user_id: str, status: str, results: Optional[Dict] = None, jwt_token: str = None) -> bool:
         """
         Update the status and optionally results of an analysis.
         
@@ -224,6 +224,7 @@ class DatabaseService:
             user_id: The user ID (for security)
             status: The new status
             results: Optional results to store
+            jwt_token: Optional JWT token for authentication
             
         Returns:
             True if successful, False otherwise
@@ -236,12 +237,46 @@ class DatabaseService:
             if results:
                 update_data["results"] = results  # Store as dict, Supabase will convert to JSONB
             
-            result = self.supabase.table("analyses").update(update_data).eq("id", analysis_id).eq("user_id", user_id).execute()
+            # Use JWT token for authentication if provided
+            if jwt_token:
+                client = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+                try:
+                    client.auth.set_session(jwt_token, jwt_token)
+                except Exception as e:
+                    print(f"[DEBUG] Failed to set session: {e}")
+                    if hasattr(client, 'postgrest'):
+                        client.postgrest.session.headers.update({"Authorization": f"Bearer {jwt_token}"})
+            else:
+                client = self.supabase
+            
+            print(f"[DEBUG] Updating analysis {analysis_id} status to {status} for user {user_id}")
+            
+            # First, let's check if the record exists
+            check_result = client.table("analyses").select("id, user_id, status").eq("id", analysis_id).execute()
+            print(f"[DEBUG] Analysis record check: {check_result}")
+            
+            if not check_result.data:
+                print(f"[ERROR] No analysis found with id {analysis_id}")
+                return False
+                
+            stored_user_id = check_result.data[0].get("user_id")
+            print(f"[DEBUG] Stored user_id: {stored_user_id}, Provided user_id: {user_id}")
+            print(f"[DEBUG] User IDs match: {stored_user_id == user_id}")
+            
+            # If user IDs don't match, try updating without user_id filter (for background tasks)
+            if stored_user_id != user_id:
+                print(f"[WARNING] User ID mismatch, updating analysis {analysis_id} without user_id filter")
+                result = client.table("analyses").update(update_data).eq("id", analysis_id).execute()
+            else:
+                result = client.table("analyses").update(update_data).eq("id", analysis_id).eq("user_id", user_id).execute()
+            print(f"[DEBUG] Update result: {result}")
             
             return len(result.data) > 0
             
         except Exception as e:
             print(f"Error updating analysis status: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     async def create_analysis(

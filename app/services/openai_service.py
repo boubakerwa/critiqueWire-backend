@@ -11,7 +11,7 @@ from typing import List, Dict, Any, Union, Optional
 class OpenAIService:
     def __init__(self):
         self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-        self.model = "gpt-4o-mini"
+        self.model = "gpt-4o"
 
     async def _analyze(self, article_text: str, system_prompt: str, response_model):
         """

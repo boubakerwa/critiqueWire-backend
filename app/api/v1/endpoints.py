@@ -13,6 +13,221 @@ from urllib.parse import urlparse
 
 router = APIRouter()
 
+# Background processing function for async analyses
+async def process_analysis_background(
+    analysis_id: str,
+    user_id: str,
+    content: str,
+    analysis_types: List[str],
+    preset: str,
+    options: schemas.AnalysisOptions,
+    url: Optional[str] = None,
+    jwt_token: Optional[str] = None
+):
+    """Process analysis in the background and update the database with results."""
+    try:
+        print(f"[DEBUG] Starting background processing for analysis {analysis_id}")
+        start_time = time.time()
+        
+        # Build analysis tasks based on options
+        tasks = {}
+        
+        if options.includeBiasAnalysis:
+            tasks["biasAnalysis"] = openai_service.get_comprehensive_bias_analysis(content, preset)
+        
+        if options.includeSentimentAnalysis:
+            tasks["sentimentAnalysis"] = openai_service.get_sentiment_analysis(content, preset)
+        
+        if options.includeClaimExtraction:
+            tasks["claimsExtracted"] = openai_service.extract_claims(content, preset)
+        
+        if options.includeSourceCredibility and url:
+            tasks["sourceCredibility"] = openai_service.assess_source_credibility(url)
+        
+        if options.includeExecutiveSummary:
+            tasks["executiveSummary"] = openai_service.get_executive_summary(content, preset)
+        
+        # Execute tasks concurrently
+        if tasks:
+            results_values = await asyncio.gather(*tasks.values())
+            results_dict = dict(zip(tasks.keys(), results_values))
+        else:
+            results_dict = {}
+        
+        # Handle fact-checking after claim extraction
+        fact_check_results = []
+        if options.includeFactCheck and "claimsExtracted" in results_dict:
+            claims = results_dict.get("claimsExtracted", [])
+            if claims:
+                fact_check_tasks = [
+                    openai_service.fact_check_claim(claim.statement, claim.id) 
+                    for claim in claims[:5]  # Limit to first 5 claims for performance
+                ]
+                fact_check_results = await asyncio.gather(*fact_check_tasks)
+        
+        # Calculate overall analysis score
+        analysis_score = openai_service.calculate_analysis_score(results_dict)
+        
+        processing_time = time.time() - start_time
+        
+        # Build comprehensive results and convert Pydantic models to dictionaries
+        def serialize_for_db(obj):
+            """Convert Pydantic models and other objects to JSON-serializable format."""
+            if hasattr(obj, 'model_dump'):
+                return obj.model_dump()
+            elif hasattr(obj, 'dict'):
+                return obj.dict()
+            elif isinstance(obj, list):
+                return [serialize_for_db(item) for item in obj]
+            elif isinstance(obj, dict):
+                return {k: serialize_for_db(v) for k, v in obj.items()}
+            else:
+                return obj
+        
+        comprehensive_results = {
+            "executiveSummary": results_dict.get("executiveSummary", "Analysis completed successfully."),
+            "biasAnalysis": serialize_for_db(results_dict.get("biasAnalysis")),
+            "sentimentAnalysis": serialize_for_db(results_dict.get("sentimentAnalysis")),
+            "claimsExtracted": serialize_for_db(results_dict.get("claimsExtracted", [])),
+            "factCheckResults": serialize_for_db(fact_check_results),
+            "sourceCredibility": serialize_for_db(results_dict.get("sourceCredibility")),
+            "analysisScore": analysis_score
+        }
+        
+        # Update the analysis in the database with completed results
+        try:
+            success = await database_service.update_analysis_status(
+                analysis_id=analysis_id,
+                user_id=user_id,
+                status="completed",
+                results=comprehensive_results,
+                jwt_token=jwt_token
+            )
+            
+            if success:
+                print(f"[DEBUG] Successfully completed background processing for analysis {analysis_id}")
+            else:
+                print(f"[ERROR] Failed to update analysis status for {analysis_id} - database update returned False")
+                # If update failed, mark as failed
+                await database_service.update_analysis_status(
+                    analysis_id=analysis_id,
+                    user_id=user_id,
+                    status="failed",
+                    results=None,
+                    jwt_token=jwt_token
+                )
+        except Exception as update_error:
+            print(f"[ERROR] Exception while updating analysis {analysis_id}: {update_error}")
+            import traceback
+            traceback.print_exc()
+            # Mark as failed
+            try:
+                await database_service.update_analysis_status(
+                    analysis_id=analysis_id,
+                    user_id=user_id,
+                    status="failed",
+                    results=None,
+                    jwt_token=jwt_token
+                )
+            except Exception as fail_error:
+                print(f"[ERROR] Failed to mark analysis {analysis_id} as failed: {fail_error}")
+            
+    except Exception as e:
+        print(f"[ERROR] Background processing failed for analysis {analysis_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # Update analysis status to failed
+        try:
+            success = await database_service.update_analysis_status(
+                analysis_id=analysis_id,
+                user_id=user_id,
+                status="failed",
+                results=None,
+                jwt_token=jwt_token
+            )
+            if success:
+                print(f"[DEBUG] Successfully marked analysis {analysis_id} as failed")
+            else:
+                print(f"[ERROR] Failed to update analysis {analysis_id} status to failed")
+        except Exception as update_error:
+            print(f"[ERROR] Exception while updating analysis {analysis_id} to failed status: {update_error}")
+            traceback.print_exc()
+
+async def delayed_background_processing(
+    analysis_id: str,
+    user_id: str,
+    content: str,
+    analysis_types: List[str],
+    preset: str,
+    options: schemas.AnalysisOptions,
+    url: Optional[str] = None,
+    jwt_token: Optional[str] = None
+):
+    """Add a realistic delay before processing analysis."""
+    # Wait 2-5 seconds to simulate realistic processing time
+    await asyncio.sleep(3)
+    await process_analysis_background(
+        analysis_id=analysis_id,
+        user_id=user_id,
+        content=content,
+        analysis_types=analysis_types,
+        preset=preset,
+        options=options,
+        url=url,
+        jwt_token=jwt_token
+    )
+
+@router.post("/analyses/{analysis_id}/process", tags=["Analysis"])
+async def trigger_analysis_processing(
+    analysis_id: str,
+    auth_data: dict = Depends(get_current_user_with_token)
+):
+    """
+    Manual trigger for analysis processing (useful for testing).
+    This endpoint allows forcing the processing of a pending analysis.
+    """
+    user = auth_data["user"]
+    user_id = getattr(user, 'id', 'user-123')
+    
+    # Get the analysis from database
+    analysis_data = await database_service.get_analysis(analysis_id, user_id, auth_data["token"])
+    
+    if not analysis_data:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+    
+    if analysis_data["data"]["status"] != "pending":
+        raise HTTPException(status_code=400, detail=f"Analysis is not pending (current status: {analysis_data['data']['status']})")
+    
+    # Mock content and options for processing (since we don't store full options in DB yet)
+    content = "Mock content for manual processing trigger"
+    options = schemas.AnalysisOptions(
+        includeBiasAnalysis=True,
+        includeExecutiveSummary=True,
+        includeFactCheck=True
+    )
+    
+    # Start background processing
+    asyncio.create_task(
+        process_analysis_background(
+            analysis_id=analysis_id,
+            user_id=user_id,
+            content=content,
+            analysis_types=["bias", "executiveSummary", "factCheck"],
+            preset="general",
+            options=options,
+            url=None,
+            jwt_token=auth_data["token"]
+        )
+    )
+    
+    return {
+        "status": "success",
+        "message": "Analysis processing triggered",
+        "analysisId": analysis_id,
+        "timestamp": datetime.datetime.utcnow().isoformat()
+    }
+
 @router.get("/health", response_model=schemas.HealthResponse)
 def health_check():
     """
@@ -922,7 +1137,20 @@ async def unified_analysis(
             article_id=article_id
         )
         
-        # TODO: In production, this would start a background task
+        # Start background processing with a small delay to simulate realistic processing
+        import asyncio
+        asyncio.create_task(
+            delayed_background_processing(
+                analysis_id=analysis_id,
+                user_id=user_id,
+                content=content,
+                analysis_types=analysis_types,
+                preset=request.preset,
+                options=request.options,
+                url=request.url
+            )
+        )
+        
         return {
             "status": "success",
             "data": {
@@ -1016,4 +1244,52 @@ async def unified_analysis(
             "metadata": metadata
         },
         "timestamp": datetime.datetime.utcnow().isoformat()
-    } 
+    }
+
+@router.post("/analyses/{analysis_id}/test-complete", tags=["Analysis"])
+async def test_complete_analysis(
+    analysis_id: str,
+    auth_data: dict = Depends(get_current_user_with_token)
+):
+    """
+    Test endpoint to mark an analysis as completed with mock results.
+    This helps debug database update issues.
+    """
+    user = auth_data["user"]
+    user_id = getattr(user, 'id', 'user-123')
+    
+    # Simple mock results that should be JSON serializable
+    mock_results = {
+        "executiveSummary": "Test analysis completed successfully.",
+        "biasAnalysis": None,
+        "sentimentAnalysis": None,
+        "claimsExtracted": [],
+        "factCheckResults": [],
+        "sourceCredibility": None,
+        "analysisScore": 75.0
+    }
+    
+    try:
+        success = await database_service.update_analysis_status(
+            analysis_id=analysis_id,
+            user_id=user_id,
+            status="completed",
+            results=mock_results,
+            jwt_token=auth_data["token"]
+        )
+        
+        if success:
+            return {
+                "status": "success",
+                "message": "Analysis marked as completed (test)",
+                "analysisId": analysis_id,
+                "timestamp": datetime.datetime.utcnow().isoformat()
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to update analysis status")
+            
+    except Exception as e:
+        print(f"[ERROR] Test complete failed: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Database update error: {str(e)}") 
