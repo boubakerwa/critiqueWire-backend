@@ -16,4 +16,18 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid authentication credentials: {e}",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+
+def get_current_user_with_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    try:
+        # Use the Supabase client to validate the token
+        user_response = supabase_client.auth.get_user(token)
+        return {"user": user_response.user, "token": token}
+    except Exception as e:
+        # The Supabase client will raise an exception for invalid tokens
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid authentication credentials: {e}",
+            headers={"WWW-Authenticate": "Bearer"},
         ) 

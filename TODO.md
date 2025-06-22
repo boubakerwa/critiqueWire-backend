@@ -96,123 +96,87 @@
 -   [x] ~~**Consolidated Redundant Endpoints (v0.4 #8):**~~
     -   [x] ~~Consolidate redundant endpoints (kept legacy for backward compatibility)~~
 
-## **🚀 CURRENT PRIORITY: Phase 3 - Database Integration & Persistence**
+## **✅ Completed Features**
 
-### **High Priority - Background Task System**
--   [ ] **Asynchronous Analysis Implementation:**
-    -   [ ] Replace TODO comments with actual background task processing
-    -   [ ] Implement Celery or similar task queue for async analysis
-    -   [ ] Add `/v1/analyses/{id}/status` endpoint for polling task progress
-    -   [ ] Implement proper error handling and retry mechanisms
-    -   [ ] Add task cancellation and timeout handling
+### v0.2 - Comprehensive Analysis System ✅
+- [x] Comprehensive analysis endpoint with configurable presets
+- [x] Source credibility assessment
+- [x] Analysis history with filtering and pagination
+- [x] Export and share functionality
+- [x] Analysis presets management (built-in and custom)
 
-### **High Priority - Database Schema & Integration**
--   [ ] **Database Schema Design:**
-    -   [ ] Design tables for analyses, articles, bookmarks, user_profiles, analysis_presets
-    -   [ ] Create database migration system
-    -   [ ] Set up Supabase database connection and models
--   [ ] **User-Specific Endpoint Logic:**
-    -   [ ] Connect `/profile` endpoints to database with UserProfile storage
-    -   [ ] Connect `/bookmarks` endpoints to database with proper user scoping
-    -   [ ] Connect `/analyses` endpoints to persistent analysis history storage
-    -   [ ] Implement proper user data isolation and security
+### v0.3 - Unified Async Analysis ✅
+- [x] Unified analysis endpoint (`POST /v1/analyses`) with async/sync modes
+- [x] Async-first approach with background processing capability
+- [x] Backward compatibility with legacy endpoints
+- [x] Enhanced response models for async operations
 
-### **Medium Priority - Content Processing**
--   [ ] **URL Content Extraction:**
-    -   [ ] Implement actual web scraping for URL analysis
-    -   [ ] Add content extraction from various article formats
-    -   [ ] Handle paywalls and authentication for premium content
-    -   [ ] Add content cleaning and preprocessing
+### v0.4 - API Consistency & Standardization ✅
+- [x] Standardized API naming convention (camelCase throughout)
+- [x] Removed ambiguous "Legacy" naming from models
+- [x] Unified fact-check result models
+- [x] Added `GET /v1/analyses/{analysis_id}` endpoint for new unified format
+- [x] Consolidated redundant endpoints (kept legacy for backward compatibility)
 
-### **Medium Priority - Enhanced Features**
--   [ ] **Real-time Analysis Status:**
-    -   [ ] Implement WebSocket connections for real-time status updates
-    -   [ ] Add progress indicators for long-running analyses
-    -   [ ] Create notification system for completed analyses
--   [ ] **Analysis Caching & Optimization:**
-    -   [ ] Implement caching for credibility assessments
-    -   [ ] Cache analysis results for repeated content
-    -   [ ] Add intelligent content fingerprinting
-
-## **Phase 4: Production Readiness**
--   [ ] **Performance & Scalability:**
-    -   [ ] Add rate limiting for analysis endpoints
-    -   [ ] Optimize database queries with proper indexing
-    -   [ ] Implement horizontal scaling for analysis workers
--   [ ] **Monitoring & Logging:**
-    -   [ ] Add comprehensive logging for analysis operations
-    -   [ ] Implement performance metrics and monitoring
-    -   [ ] Set up error tracking and alerting
--   [ ] **Testing:**
-    -   [ ] Add unit tests for all new analysis functionality
-    -   [ ] Add integration tests for the complete analysis pipeline
-    -   [ ] Add performance tests for large-scale analysis operations
--   [ ] **Documentation & Deployment:**
-    -   [ ] Update API documentation with all v0.4 features
-    -   [ ] Refine Dockerfile for production optimization
-    -   [ ] Set up CI/CD pipeline for automated testing and deployment
-
-## **🎯 Current Focus: Background Task System & Database Integration**
-
-**Next Immediate Tasks:**
-1. **Implement Celery/RQ for async task processing**
-2. **Design and create database schema**
-3. **Add polling endpoint for async task status**
-4. **Implement URL content extraction**
-
-**Frontend Integration Status:** ✅ **Ready for Production**
-- Unified endpoint `POST /v1/analyses` is fully functional
-- Async by default keeps UI responsive
-- Consistent response format simplifies state management
-- All v0.4 User Stories completed and tested 
+### v0.5 - Database Integration & Persistence ✅
+- [x] Supabase database integration with PostgreSQL
+- [x] Analysis storage and retrieval functionality
+- [x] User-specific analysis history with filtering and pagination
+- [x] Background task processing for async analyses
+- [x] Real-time status updates via database polling
+- [x] Row Level Security (RLS) for data protection
 
 ## 🔄 Current Priorities
 
 ### High Priority
-1. **Background Task System**
-   - Implement proper async task queue (Celery/Redis)
-   - Real-time status updates via WebSocket
-   - Task progress tracking and cancellation
-
-2. **Database Integration**
-   - PostgreSQL schema design
-   - User management and authentication persistence
-   - Analysis history storage and retrieval
-   - Preset management with user ownership
-
-3. **URL Content Extraction**
-   - Robust web scraping with fallbacks
+1. **URL Content Extraction** ⭐
+   - Implement robust web scraping with fallbacks
    - Content cleaning and normalization
    - Metadata extraction (author, date, etc.)
+   - Error handling for inaccessible URLs
 
-### Medium Priority
-4. **Real-time Status Updates**
+2. **Production Background Task System**
+   - Replace simple background service with Celery/Redis
+   - Task queue management and monitoring
+   - Retry logic for failed analyses
+   - Task cancellation and cleanup
+
+3. **Real-time Status Updates**
    - WebSocket implementation for live progress
    - Analysis status notifications
    - Real-time collaboration features
 
-5. **Caching & Performance**
+### Medium Priority
+4. **Caching & Performance**
    - Redis caching for analysis results
    - Rate limiting and API quotas
    - Response optimization
+   - Database query optimization
 
-6. **Enhanced Analysis Features**
+5. **Enhanced Analysis Features**
    - Multi-language support
    - Advanced fact-checking with multiple sources
    - Sentiment analysis improvements
    - Bias detection refinements
 
+6. **User Management & Analytics**
+   - User preferences and settings
+   - Usage analytics and metrics
+   - Analysis quality scoring
+   - User feedback system
+
 ### Low Priority
 7. **Production Readiness**
-   - Docker containerization
+   - Docker containerization improvements
    - Environment configuration management
    - Logging and monitoring setup
    - Health checks and metrics
 
-8. **API Documentation**
+8. **API Documentation & Testing**
    - OpenAPI specification updates
    - Interactive documentation improvements
-   - Code examples and tutorials
+   - Comprehensive test suite
+   - Performance benchmarks
 
 ## 🚀 Future Enhancements
 

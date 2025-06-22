@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from app.api.v1 import schemas
-from app.core.security import get_current_user
+from app.core.security import get_current_user, get_current_user_with_token
 from app.services.openai_service import openai_service
+from app.services.database_service import database_service
 from app.core.config import settings
 import datetime
 import asyncio
@@ -735,83 +736,26 @@ async def get_analysis_results(
 @router.get("/analyses/{analysis_id}", response_model=schemas.AnalysisResultsResponse)
 async def get_unified_analysis_results(
     analysis_id: str,
-    user: dict = Depends(get_current_user)
+    auth_data: dict = Depends(get_current_user_with_token)
 ):
     """
     Get analysis results for a specific analysis ID (unified format).
     This endpoint returns results in the new comprehensive format.
     """
-    # Placeholder implementation - in real app, this would fetch from database
-    return {
-        "status": "success",
-        "data": {
-            "analysisId": analysis_id,
-            "articleId": "article-123",
-            "analysisType": "url",
-            "status": "completed",
-            "results": {
-                "executiveSummary": "This analysis found moderate bias and verified several key claims.",
-                "biasAnalysis": {
-                    "score": 0.3,
-                    "leaning": "center",
-                    "summary": "The article shows minimal bias.",
-                    "details": []
-                },
-                "sentimentAnalysis": {
-                    "overallSentiment": "neutral",
-                    "confidence": 0.8,
-                    "emotionalTone": ["objective", "analytical"]
-                },
-                "claimsExtracted": [
-                    {
-                        "id": "claim-1",
-                        "statement": "Sample claim statement",
-                        "context": "Context of the claim",
-                        "importance": "high",
-                        "category": "factual"
-                    }
-                ],
-                "factCheckResults": [
-                    {
-                        "claimId": "claim-1",
-                        "status": "verified",
-                        "confidence": 0.9,
-                        "sources": [
-                            {
-                                "name": "Reliable Source",
-                                "url": "https://example.com/verification",
-                                "credibilityScore": 95.0
-                            }
-                        ],
-                        "explanation": "This claim has been verified by multiple sources."
-                    }
-                ],
-                "sourceCredibility": {
-                    "url": "https://example.com/article",
-                    "domain": "example.com",
-                    "credibilityScore": 85.0,
-                    "assessment": "credible",
-                    "factors": {
-                        "transparency": 80.0,
-                        "accuracy": 90.0,
-                        "bias": 75.0,
-                        "ownership": 85.0,
-                        "expertise": 80.0
-                    },
-                    "report": "This source demonstrates good credibility with transparent reporting.",
-                    "lastUpdated": datetime.datetime.utcnow()
-                },
-                "analysisScore": 82.5
-            },
-            "metadata": {
-                "processingTime": 2.5,
-                "preset": "general",
-                "wordsAnalyzed": 500,
-                "createdAt": datetime.datetime.utcnow()
-            }
-        },
-        "timestamp": datetime.datetime.utcnow().isoformat()
-    }
+    user = auth_data["user"]
+    jwt_token = auth_data["token"]
+    user_id = getattr(user, 'id', 'user-123')
+    
+    # Retrieve analysis from database
+    analysis_data = await database_service.get_analysis(analysis_id, user_id, jwt_token)
+    
+    if not analysis_data:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Analysis with ID '{analysis_id}' not found. This analysis may not exist or may not have been completed yet."
+        )
+    
+    return analysis_data
 
 # --- User Data Endpoints (Placeholders) ---
 
@@ -912,13 +856,17 @@ async def update_user_profile(request: schemas.UpdateUserProfileRequest, user: d
 )
 async def unified_analysis(
     request: schemas.UnifiedAnalyzeRequest,
-    user: dict = Depends(get_current_user),
+    auth_data: dict = Depends(get_current_user_with_token),
 ):
     """
     Unified analysis endpoint that handles both comprehensive and legacy analysis types.
     Supports both async and sync modes based on the request configuration.
     """
     start_time = time.time()
+    
+    user = auth_data["user"]
+    jwt_token = auth_data["token"]
+    user_id = getattr(user, 'id', 'user-123')
     
     # Validate input
     if not request.url and not request.content:
@@ -945,8 +893,35 @@ async def unified_analysis(
     
     analysis_id = str(uuid.uuid4())
     
+    # Convert options to analysis types list
+    analysis_types = []
+    if request.options.includeBiasAnalysis:
+        analysis_types.append("bias")
+    if request.options.includeSentimentAnalysis:
+        analysis_types.append("sentiment")
+    if request.options.includeFactCheck:
+        analysis_types.append("factCheck")
+    if request.options.includeClaimExtraction:
+        analysis_types.append("claimExtraction")
+    if request.options.includeExecutiveSummary:
+        analysis_types.append("executiveSummary")
+    
     # If async mode is requested, return immediately with task status
     if request.async_mode:
+        # Store initial analysis record in database
+        await database_service.create_analysis(
+            analysis_id=analysis_id,
+            user_id=user_id,
+            content=content,
+            analysis_types=analysis_types,
+            content_type=analysis_type,
+            preset=request.preset,
+            jwt_token=jwt_token,
+            title=request.title,
+            url=request.url,
+            article_id=article_id
+        )
+        
         # TODO: In production, this would start a background task
         return {
             "status": "success",

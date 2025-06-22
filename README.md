@@ -7,6 +7,7 @@ This repository contains the backend service for CritiqueWire, a platform for AI
 ### Core Analysis Capabilities
 - **Unified Analysis System**: Single endpoint (`POST /v1/analyses`) supporting both URL and text content analysis
 - **Async-First Processing**: Background task processing with real-time status updates
+- **Database Persistence**: Full Supabase integration with PostgreSQL for analysis storage
 - **Comprehensive Analysis**: Bias detection, sentiment analysis, fact-checking, claim extraction, and source credibility assessment
 - **Configurable Presets**: Built-in presets (general, political, financial, scientific, opinion) with custom preset creation
 - **Analysis History**: Complete history management with filtering, search, and pagination
@@ -16,6 +17,7 @@ This repository contains the backend service for CritiqueWire, a platform for AI
 - **Export & Share**: Multiple export formats (PDF, DOCX, HTML, JSON, CSV) with sharing capabilities
 - **User Management**: Profile management and authentication via Supabase
 - **Secure API**: JWT authentication with role-based access control
+- **Background Processing**: Real async analysis processing with status tracking
 
 ## 🛠️ Getting Started
 
@@ -66,6 +68,31 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 The API will be available at `http://localhost:8000`.
+
+### Database Setup
+
+This application uses Supabase (PostgreSQL) for data persistence. To set up the database:
+
+1. **Create Supabase Project**: Set up a new project at [supabase.com](https://supabase.com)
+
+2. **Run Database Schema**: Execute the SQL schema in your Supabase SQL Editor:
+   ```bash
+   # Copy and paste the contents of docs/database-schema.sql
+   # into your Supabase SQL Editor and run it
+   ```
+
+3. **Environment Variables**: Ensure your `.env` file includes:
+   ```env
+   SUPABASE_URL="your_supabase_project_url"
+   SUPABASE_ANON_KEY="your_supabase_anon_key"
+   SUPABASE_JWT_SECRET="your_supabase_jwt_secret"
+   ```
+
+The schema includes:
+- **analyses table**: Stores all analysis results and metadata
+- **Row Level Security**: Users can only access their own analyses
+- **Indexes**: Optimized for fast queries and full-text search
+- **Triggers**: Automatic timestamp updates
 
 ## 📚 API Documentation
 
@@ -202,16 +229,19 @@ See `docs/openapi_refinement_v*.md` for detailed evolution history.
 - Analysis history and presets management
 - Export and share functionality
 - API consistency and standardization (v0.4)
+- **Database integration with Supabase (v0.5)**
+- **Background task processing for async analyses**
+- **Real-time status updates via database polling**
 
 ### 🔄 In Progress
-- Background task system (Celery/Redis)
-- Database integration (PostgreSQL)
-- Real-time status updates (WebSocket)
+- URL content extraction improvements
+- Production background task system (Celery/Redis)
+- WebSocket implementation for real-time updates
 
 ### 📋 Planned
-- URL content extraction improvements
 - Caching and performance optimization
 - Production deployment setup
+- Enhanced analysis features
 
 ## 🤝 Contributing
 
