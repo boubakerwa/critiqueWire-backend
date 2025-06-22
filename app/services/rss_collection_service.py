@@ -68,8 +68,21 @@ class RSSCollectionService:
         # Check for media content
         if hasattr(entry, 'media_content') and entry.media_content:
             for media in entry.media_content:
-                if 'url' in media and media.get('type', '').startswith('image'):
-                    images.append(media['url'])
+                if 'url' in media:
+                    # Accept media content if it's an image type or if type is unknown/empty
+                    media_type = media.get('type', '').lower()
+                    media_url = media['url']
+                    
+                    # Check if it's an image by type or by URL extension
+                    is_image = (
+                        media_type.startswith('image') or
+                        media_type == '' or
+                        media_type == 'unknown' or
+                        any(media_url.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'])
+                    )
+                    
+                    if is_image:
+                        images.append(media_url)
         
         # Check enclosures
         if hasattr(entry, 'enclosures') and entry.enclosures:
