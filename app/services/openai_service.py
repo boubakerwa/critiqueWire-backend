@@ -238,7 +238,7 @@ class OpenAIService:
         )
         
         result = await self._analyze(text, prompt, SummaryResponse)
-        return result.summary if result else "Analysis completed successfully."
+        return result.summary if result else None
 
     def calculate_analysis_score(self, results_dict: Dict[str, Any]) -> float:
         """Calculate an overall analysis score based on the results."""

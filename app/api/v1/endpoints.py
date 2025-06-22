@@ -66,6 +66,13 @@ async def process_analysis_background(
         else:
             results_dict = {}
         
+        # Check if we got any valid results from OpenAI
+        valid_results = [v for v in results_dict.values() if v is not None]
+        if not valid_results and tasks:
+            # All OpenAI calls failed, mark analysis as failed
+            print(f"[ERROR] All OpenAI analysis tasks failed for analysis {analysis_id}")
+            raise Exception("All OpenAI analysis tasks failed - no valid results obtained")
+        
         # Handle fact-checking after claim extraction
         fact_check_results = []
         if options.includeFactCheck and "claimsExtracted" in results_dict:
@@ -76,6 +83,8 @@ async def process_analysis_background(
                     for claim in claims[:5]  # Limit to first 5 claims for performance
                 ]
                 fact_check_results = await asyncio.gather(*fact_check_tasks)
+                # Filter out failed fact-check results
+                fact_check_results = [result for result in fact_check_results if result is not None]
         
         # Calculate overall analysis score
         analysis_score = openai_service.calculate_analysis_score(results_dict)
@@ -96,8 +105,9 @@ async def process_analysis_background(
             else:
                 return obj
         
+        # Only build results if we have valid data - no fallback to generic messages
         comprehensive_results = {
-            "executiveSummary": results_dict.get("executiveSummary", "Analysis completed successfully."),
+            "executiveSummary": results_dict.get("executiveSummary"),  # No fallback - will be None if failed
             "biasAnalysis": serialize_for_db(results_dict.get("biasAnalysis")),
             "sentimentAnalysis": serialize_for_db(results_dict.get("sentimentAnalysis")),
             "claimsExtracted": serialize_for_db(results_dict.get("claimsExtracted", [])),
@@ -394,6 +404,12 @@ async def comprehensive_analysis(
     else:
         results_dict = {}
     
+    # Check if we got any valid results from OpenAI
+    valid_results = [v for v in results_dict.values() if v is not None]
+    if not valid_results and tasks:
+        # All OpenAI calls failed, raise error instead of returning generic results
+        raise HTTPException(status_code=500, detail="Analysis failed - OpenAI services unavailable")
+    
     # Handle fact-checking after claim extraction
     fact_check_results = []
     if request.options.includeFactCheck and "claimsExtracted" in results_dict:
@@ -404,6 +420,8 @@ async def comprehensive_analysis(
                 for claim in claims[:5]  # Limit to first 5 claims for performance
             ]
             fact_check_results = await asyncio.gather(*fact_check_tasks)
+            # Filter out failed fact-check results
+            fact_check_results = [result for result in fact_check_results if result is not None]
     
     # Calculate overall analysis score
     analysis_score = openai_service.calculate_analysis_score(results_dict)
@@ -412,7 +430,7 @@ async def comprehensive_analysis(
     
     # Build comprehensive results
     comprehensive_results = schemas.ComprehensiveAnalysisResults(
-        executiveSummary=results_dict.get("executiveSummary", "Analysis completed successfully."),
+        executiveSummary=results_dict.get("executiveSummary"),  # No fallback
         biasAnalysis=results_dict.get("biasAnalysis"),
         sentimentAnalysis=results_dict.get("sentimentAnalysis"),
         claimsExtracted=results_dict.get("claimsExtracted", []),
@@ -1240,6 +1258,12 @@ async def unified_analysis(
     else:
         results_dict = {}
     
+    # Check if we got any valid results from OpenAI
+    valid_results = [v for v in results_dict.values() if v is not None]
+    if not valid_results and tasks:
+        # All OpenAI calls failed, raise error instead of returning generic results
+        raise HTTPException(status_code=500, detail="Analysis failed - OpenAI services unavailable")
+    
     # Handle fact-checking after claim extraction
     fact_check_results = []
     if request.options.includeFactCheck and "claimsExtracted" in results_dict:
@@ -1250,6 +1274,8 @@ async def unified_analysis(
                 for claim in claims[:5]  # Limit to first 5 claims for performance
             ]
             fact_check_results = await asyncio.gather(*fact_check_tasks)
+            # Filter out failed fact-check results
+            fact_check_results = [result for result in fact_check_results if result is not None]
     
     # Calculate overall analysis score
     analysis_score = openai_service.calculate_analysis_score(results_dict)
@@ -1258,7 +1284,7 @@ async def unified_analysis(
     
     # Build comprehensive results
     comprehensive_results = schemas.ComprehensiveAnalysisResults(
-        executiveSummary=results_dict.get("executiveSummary", "Analysis completed successfully."),
+        executiveSummary=results_dict.get("executiveSummary"),  # No fallback
         biasAnalysis=results_dict.get("biasAnalysis"),
         sentimentAnalysis=results_dict.get("sentimentAnalysis"),
         claimsExtracted=results_dict.get("claimsExtracted", []),
@@ -1301,7 +1327,7 @@ async def test_complete_analysis(
     
     # Simple mock results that should be JSON serializable
     mock_results = {
-        "executiveSummary": "Test analysis completed successfully.",
+        "executiveSummary": "Test endpoint - analysis marked as completed for debugging purposes.",
         "biasAnalysis": None,
         "sentimentAnalysis": None,
         "claimsExtracted": [],

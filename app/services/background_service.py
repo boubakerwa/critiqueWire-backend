@@ -54,6 +54,12 @@ class BackgroundService:
             else:
                 results_dict = {}
             
+            # Check if we got any valid results from OpenAI
+            valid_results = [v for v in results_dict.values() if v is not None]
+            if not valid_results and tasks:
+                # All OpenAI calls failed, mark as failed instead of returning generic results
+                raise Exception("All OpenAI analysis tasks failed - no valid results obtained")
+            
             # Handle fact-checking after claim extraction
             fact_check_results = []
             if options.get("includeFactCheck") and "claimsExtracted" in results_dict:
@@ -64,6 +70,8 @@ class BackgroundService:
                         for claim in claims[:5]  # Limit to first 5 claims for performance
                     ]
                     fact_check_results = await asyncio.gather(*fact_check_tasks)
+                    # Filter out failed fact-check results
+                    fact_check_results = [result for result in fact_check_results if result is not None]
             
             # Calculate overall analysis score
             analysis_score = openai_service.calculate_analysis_score(results_dict)
@@ -72,7 +80,7 @@ class BackgroundService:
             
             # Build comprehensive results
             comprehensive_results = schemas.ComprehensiveAnalysisResults(
-                executiveSummary=results_dict.get("executiveSummary", "Analysis completed successfully."),
+                executiveSummary=results_dict.get("executiveSummary"),  # No fallback
                 biasAnalysis=results_dict.get("biasAnalysis"),
                 sentimentAnalysis=results_dict.get("sentimentAnalysis"),
                 claimsExtracted=results_dict.get("claimsExtracted", []),
