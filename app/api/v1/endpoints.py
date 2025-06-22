@@ -257,15 +257,26 @@ async def trigger_analysis_processing(
     }
 
 @router.get("/health", response_model=schemas.HealthResponse)
-def health_check():
+async def health_check():
     """
     Health check endpoint.
     """
+    # Test OpenAI connectivity
+    openai_status = "unknown"
+    try:
+        # Simple test call to OpenAI
+        test_result = await openai_service.get_executive_summary("Test health check", "general")
+        openai_status = "healthy" if test_result else "error"
+    except Exception as e:
+        print(f"[ERROR] OpenAI health check failed: {e}")
+        openai_status = "error"
+    
     return {
         "status": "success",
         "data": {
             "status": "healthy",
-            "version": "1.0.0"
+            "version": "1.0.0",
+            "openai_status": openai_status
         },
         "timestamp": datetime.datetime.utcnow().isoformat()
     }

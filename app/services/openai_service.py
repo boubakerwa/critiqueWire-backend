@@ -10,6 +10,11 @@ from typing import List, Dict, Any, Union, Optional
 
 class OpenAIService:
     def __init__(self):
+        if not settings.OPENAI_API_KEY:
+            print("[ERROR] OPENAI_API_KEY is not set!")
+        else:
+            print(f"[DEBUG] OpenAI API key configured: {settings.OPENAI_API_KEY[:10]}...")
+        
         self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
         self.model = "gpt-4o"
 
@@ -29,11 +34,18 @@ class OpenAIService:
             response_json = json.loads(response.choices[0].message.content)
             return response_model.model_validate(response_json)
         except (json.JSONDecodeError, ValidationError, IndexError) as e:
-            # TODO: Add more robust error handling and logging
-            print(f"Error during OpenAI analysis: {e}")
+            print(f"[ERROR] OpenAI analysis parsing error: {e}")
+            print(f"[ERROR] Response content: {response.choices[0].message.content if 'response' in locals() else 'No response'}")
             return None
         except Exception as e:
-            print(f"An unexpected error occurred: {e}")
+            print(f"[ERROR] OpenAI API error: {type(e).__name__}: {e}")
+            # More specific error information
+            if hasattr(e, 'status_code'):
+                print(f"[ERROR] HTTP Status Code: {e.status_code}")
+            if hasattr(e, 'response'):
+                print(f"[ERROR] Response: {e.response}")
+            import traceback
+            print(f"[ERROR] Full traceback: {traceback.format_exc()}")
             return None
 
     def _get_system_prompt(self, task_description: str, response_model, preset: str = "general") -> str:
@@ -166,7 +178,11 @@ class OpenAIService:
             response_json["claimId"] = claim_id
             return schemas.FactCheckResult.model_validate(response_json)
         except Exception as e:
-            print(f"Error during claim fact-checking: {e}")
+            print(f"[ERROR] Claim fact-checking error: {type(e).__name__}: {e}")
+            if hasattr(e, 'status_code'):
+                print(f"[ERROR] HTTP Status Code: {e.status_code}")
+            import traceback
+            print(f"[ERROR] Full traceback: {traceback.format_exc()}")
             return None
 
     async def assess_source_credibility(self, url: str) -> Union[schemas.SourceCredibilityResult, None]:
@@ -202,7 +218,11 @@ class OpenAIService:
             
             return schemas.SourceCredibilityResult.model_validate(response_json)
         except Exception as e:
-            print(f"Error during credibility assessment: {e}")
+            print(f"[ERROR] Credibility assessment error: {type(e).__name__}: {e}")
+            if hasattr(e, 'status_code'):
+                print(f"[ERROR] HTTP Status Code: {e.status_code}")
+            import traceback
+            print(f"[ERROR] Full traceback: {traceback.format_exc()}")
             return None
 
     async def get_executive_summary(self, text: str, preset: str = "general") -> str:
