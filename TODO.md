@@ -96,6 +96,31 @@
 -   [x] ~~**Consolidated Redundant Endpoints (v0.4 #8):**~~
     -   [x] ~~Consolidate redundant endpoints (kept legacy for backward compatibility)~~
 
+## **✅ COMPLETED: Background Processing & Error Handling (v0.5)**
+-   [x] ~~**Async Background Processing:**~~
+    -   [x] ~~Fixed validation errors in analysis response formatting~~
+    -   [x] ~~Implemented proper background task processing with asyncio~~
+    -   [x] ~~Added manual trigger endpoint for testing background processing~~
+    -   [x] ~~Fixed JSON serialization issues with Pydantic models~~
+    -   [x] ~~Switched from GPT-4o-mini to GPT-4o for better reliability~~
+    -   [x] ~~Enhanced JWT authentication for background processing~~
+    -   [x] ~~Fixed asyncio import issues in production environment~~
+-   [x] ~~**Database Content Storage:**~~
+    -   [x] ~~Added full content storage to analyses table (not just preview)~~
+    -   [x] ~~Fixed background processing to retrieve full content from database~~
+    -   [x] ~~Enhanced content retrieval methods for background processing~~
+-   [x] ~~**Production Error Handling:**~~
+    -   [x] ~~Added comprehensive OpenAI error logging and handling~~
+    -   [x] ~~Enhanced error tracking with detailed tracebacks~~
+    -   [x] ~~Added OpenAI connectivity validation in health checks~~
+    -   [x] ~~Resolved OpenAI API key configuration issues~~
+-   [x] ~~**Honest Failure Reporting:**~~
+    -   [x] ~~Removed fallback mechanisms that returned generic "Analysis completed successfully" messages~~
+    -   [x] ~~Background processing now properly fails with "failed" status when OpenAI calls fail~~
+    -   [x] ~~Sync endpoints return HTTP 500 errors when OpenAI services are unavailable~~
+    -   [x] ~~Enhanced result validation to detect and handle OpenAI failures~~
+    -   [x] ~~Filtered out failed fact-check results to avoid null entries~~
+
 ## **✅ Completed Features**
 
 ### v0.2 - Comprehensive Analysis System ✅
@@ -125,6 +150,8 @@
 - [x] Background task processing for async analyses
 - [x] Real-time status updates via database polling
 - [x] Row Level Security (RLS) for data protection
+- [x] Production-ready background processing with proper error handling
+- [x] Honest failure reporting (no more misleading "completed" status with generic results)
 
 ## 🔄 Current Priorities
 
@@ -146,53 +173,146 @@
    - Analysis status notifications
    - Real-time collaboration features
 
-### Medium Priority
-4. **Caching & Performance**
-   - Redis caching for analysis results
-   - Rate limiting and API quotas
-   - Response optimization
-   - Database query optimization
+4. **🆕 Automated News Collection & Display System** ⭐⭐⭐
+   - **News Collection Pipeline (Phase 1)**
+     - [ ] RSS feed integration for Tunisian news sources (no registration required)
+     - [ ] News API integrations as backup (Google News, NewsAPI, etc.)
+     - [ ] Scheduled background job (every 10-15 minutes)
+     - [ ] Content extraction and normalization from RSS feeds
+     - [ ] Media extraction (thumbnails, images, videos from RSS)
+   - **Content Storage & Display**
+     - [ ] Article storage with metadata (headline, summary, source, timestamp)
+     - [ ] Media storage and optimization (images, thumbnails)
+     - [ ] Duplicate article detection and consolidation
+     - [ ] Public news feed display (like a news aggregator)
+     - [ ] Source attribution and credibility indicators
+   - **On-Demand Analysis System**
+     - [ ] "Analyze" button for each article
+     - [ ] Async analysis execution only when user requests
+     - [ ] Analysis result caching - once analyzed, show to all users
+     - [ ] Analysis status tracking (pending/completed/failed)
+     - [ ] Cost optimization through smart caching
+   - **User Experience Features**
+     - [ ] News feed browsing and filtering
+     - [ ] Search functionality across collected articles
+     - [ ] Source filtering and preferences
+     - [ ] Analysis history and popular analyses
+     - [ ] Trending articles and most-analyzed content
 
-5. **Enhanced Analysis Features**
-   - Multi-language support
-   - Advanced fact-checking with multiple sources
-   - Sentiment analysis improvements
-   - Bias detection refinements
+## 🚀 FUTURE: LangGraph Integration Planning
 
-6. **User Management & Analytics**
-   - User preferences and settings
-   - Usage analytics and metrics
-   - Analysis quality scoring
-   - User feedback system
+### **Phase 1: LangGraph Foundation (v0.6)** 🎯
+- [ ] **Research & Architecture Planning**
+  - [ ] Evaluate LangGraph vs LangChain for our use case
+  - [ ] Design agent-based workflow architecture
+  - [ ] Plan migration strategy from direct OpenAI calls
+  - [ ] Define agent interaction patterns
+  - [ ] **🆕 Design news monitoring agent workflow architecture**
 
-### Low Priority
-7. **Production Readiness**
-   - Docker containerization improvements
-   - Environment configuration management
-   - Logging and monitoring setup
-   - Health checks and metrics
+- [ ] **Core LangGraph Setup**
+  - [ ] Install and configure LangGraph dependencies
+  - [ ] Create base agent framework and workflow engine
+  - [ ] Implement state management for multi-step workflows
+  - [ ] Set up workflow visualization and debugging tools
 
-8. **API Documentation & Testing**
-   - OpenAPI specification updates
-   - Interactive documentation improvements
-   - Comprehensive test suite
-   - Performance benchmarks
+- [ ] **Basic Agent Implementation**
+  - [ ] Convert existing analysis tasks to LangGraph agents
+  - [ ] Create Content Analysis Agent (bias, sentiment, claims)
+  - [ ] Create Fact-Check Agent with external API integration
+  - [ ] Implement agent coordination and handoff mechanisms
+  - [ ] **🆕 Create News Monitoring Agent (RSS feeds, APIs, scraping)**
+  - [ ] **🆕 Create Deduplication Agent (headline similarity, content matching)**
+
+### **Phase 2: Advanced Agent Workflows (v0.7)** 🤖
+- [ ] **Multi-Agent Analysis Pipeline**
+  - [ ] Investigative Research Agent (find related articles, cross-reference sources)
+  - [ ] Source Verification Agent (author credibility, publication history)
+  - [ ] Editorial Workflow Agent (flagging, approval processes)
+  - [ ] Quality Assurance Agent (result validation, confidence scoring)
+  - [ ] **🆕 News Aggregation Agent (multi-source collection and coordination)**
+  - [ ] **🆕 Trend Analysis Agent (pattern detection across time and sources)**
+
+- [ ] **Action-Based Agents**
+  - [ ] Notification Agent (email, SMS, webhooks)
+  - [ ] Archive Agent (knowledge base storage, indexing)
+  - [ ] Report Generation Agent (automated summaries, alerts)
+  - [ ] User Engagement Agent (personalized recommendations)
+  - [ ] **🆕 Breaking News Alert Agent (urgent story detection and notification)**
+  - [ ] **🆕 Source Monitoring Agent (new source discovery and validation)**
+
+- [ ] **Workflow Orchestration**
+  - [ ] Conditional routing based on content type and analysis results
+  - [ ] Parallel vs sequential agent execution optimization
+  - [ ] Error handling and agent fallback strategies
+  - [ ] Human-in-the-loop integration points
+  - [ ] **🆕 Automated news pipeline orchestration (monitoring → analysis → storage → alerts)**
+
+### **Phase 3: Intelligent Agent Features (v0.8)** 🧠
+- [ ] **Adaptive Workflows**
+  - [ ] Content-aware agent selection (news vs opinion vs research papers)
+  - [ ] Dynamic analysis depth based on bias/credibility scores
+  - [ ] User preference learning and workflow customization
+  - [ ] Historical pattern recognition and proactive analysis
+  - [ ] **🆕 Geographic and topic-based monitoring customization**
+  - [ ] **🆕 Source reliability learning and adaptive monitoring frequency**
+
+- [ ] **Cross-Analysis Intelligence**
+  - [ ] Source reputation tracking across analyses
+  - [ ] Pattern detection in bias trends
+  - [ ] Automated alert systems for significant findings
+  - [ ] Knowledge graph building from analysis results
+  - [ ] **🆕 Cross-source story correlation and bias comparison**
+  - [ ] **🆕 Temporal bias trend analysis and prediction**
+
+- [ ] **Multi-Model Integration**
+  - [ ] Model specialization per agent (Claude for bias, GPT for claims, etc.)
+  - [ ] Cost optimization through intelligent model selection
+  - [ ] Fallback chains for reliability (GPT-4 → GPT-3.5 → Claude)
+  - [ ] Performance monitoring and model effectiveness tracking
+  - [ ] **🆕 News-specific model optimization (headline analysis, source credibility)**
+
+### **Phase 4: Production Agent System (v0.9)** 🏭
+- [ ] **Scalability & Performance**
+  - [ ] Agent load balancing and resource management
+  - [ ] Workflow caching and result reuse
+  - [ ] Agent performance monitoring and optimization
+  - [ ] Horizontal scaling for high-volume analysis
+  - [ ] **🆕 High-frequency news monitoring with efficient resource usage**
+  - [ ] **🆕 Real-time processing for breaking news scenarios**
+
+- [ ] **Advanced Integration**
+  - [ ] External API integrations (fact-check databases, news APIs)
+  - [ ] Real-time data feeds and live analysis
+  - [ ] Third-party service orchestration
+  - [ ] Webhook and event-driven workflows
+  - [ ] **🆕 Multi-country news monitoring expansion**
+  - [ ] **🆕 Social media monitoring integration (Twitter, Facebook, etc.)**
+
+- [ ] **Enterprise Features**
+  - [ ] Custom agent development framework
+  - [ ] Workflow templates and marketplace
+  - [ ] Team collaboration on agent workflows
+  - [ ] Advanced analytics and workflow insights
+  - [ ] **🆕 Custom monitoring dashboards for news organizations**
+  - [ ] **🆕 White-label news intelligence platform**
 
 ## 🚀 Future Enhancements
 
 ### Advanced Features
 - **Collaborative Analysis**: Team workspaces and shared analyses
-- **AI Chat Integration**: Interactive analysis discussions
-- **Custom Analysis Templates**: User-defined analysis workflows
-- **Integration APIs**: Third-party service connections
+- **AI Chat Integration**: Interactive analysis discussions with agents
+- **Custom Analysis Templates**: User-defined agent workflows
+- **Integration APIs**: Third-party service connections via agents
 - **Mobile API**: Optimized endpoints for mobile apps
 
 ### Analytics & Insights
 - **Usage Analytics**: Track analysis patterns and preferences
 - **Performance Metrics**: Monitor analysis quality and speed
 - **User Behavior Analysis**: Understand feature usage patterns
+- **Agent Performance Analytics**: Monitor agent effectiveness and optimization opportunities
 
 ### Security & Compliance
 - **Data Privacy**: GDPR compliance and data retention policies
 - **Access Control**: Fine-grained permissions and role management
-- **Audit Logging**: Comprehensive activity tracking 
+- **Audit Logging**: Comprehensive activity tracking
+- **Agent Security**: Secure agent-to-agent communication and external API access 
