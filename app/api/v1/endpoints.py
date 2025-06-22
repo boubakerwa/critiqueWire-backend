@@ -1077,6 +1077,8 @@ async def unified_analysis(
     Unified analysis endpoint that handles both comprehensive and legacy analysis types.
     Supports both async and sync modes based on the request configuration.
     """
+    import asyncio  # Import asyncio at the function level for both sync and async paths
+    
     start_time = time.time()
     
     user = auth_data["user"]
@@ -1138,7 +1140,6 @@ async def unified_analysis(
         )
         
         # Start background processing with a small delay to simulate realistic processing
-        import asyncio
         asyncio.create_task(
             delayed_background_processing(
                 analysis_id=analysis_id,
