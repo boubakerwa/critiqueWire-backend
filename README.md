@@ -133,6 +133,37 @@ All API endpoints (except `/health`) require a valid JWT from Supabase. Include 
 Authorization: Bearer <your_supabase_jwt>
 ```
 
+#### Getting a JWT Token
+
+For development and testing, you can get a JWT token using the included utility:
+
+1. **Using the JWT helper script:**
+   ```bash
+   python get_jwt.py
+   ```
+   This will generate a valid JWT token and save it to `tmp_jwt.txt` for testing purposes.
+
+2. **Manual token generation:**
+   - Log into your Supabase dashboard
+   - Go to Authentication > Users
+   - Create a user or use existing user
+   - Copy the JWT token from the user details
+
+3. **Using the token in requests:**
+   ```bash
+   # Load token from file
+   TOKEN=$(cat tmp_jwt.txt)
+   
+   # Use in API calls
+   curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/v1/analyses
+   ```
+
+#### Authentication Flow
+- The backend validates JWT tokens against Supabase
+- User information is extracted from the token payload
+- Row Level Security ensures users only access their own data
+- All database operations are scoped to the authenticated user
+
 ### Example Usage
 
 #### Quick Analysis (Synchronous)
@@ -186,6 +217,53 @@ This project is configured for Render deployment:
 - **Environment Variables**: Add your `.env` variables to Render service configuration
 - **Auto-deploy**: Connect your GitHub repository for automatic deployments
 
+## 🔧 Recent Improvements
+
+### Database Integration & Validation Fixes (June 2025)
+
+**Fixed Critical Response Validation Issues:**
+- ✅ Resolved `analysisType` field validation errors in GET `/v1/analyses/{analysis_id}`
+- ✅ Fixed metadata schema compliance (`processingTime` field mapping)
+- ✅ Implemented missing `create_analysis` method in database service
+- ✅ Ensured proper content type detection ("url" vs "text")
+
+**Enhanced Database Service:**
+- Complete Supabase integration with proper JWT authentication
+- Consistent field naming between storage and retrieval
+- Proper error handling and logging for debugging
+- Row-level security implementation
+
+**Async Analysis Flow:**
+- Full async analysis creation and retrieval
+- Proper status tracking ("pending", "completed", "failed")
+- Metadata preservation across create/retrieve operations
+
+### Troubleshooting Common Issues
+
+**Response Validation Errors:**
+```bash
+# If you see "Input should be 'url' or 'text'" errors:
+# This was fixed by ensuring analysisType returns content type, not analysis types list
+```
+
+**Authentication Issues:**
+```bash
+# Generate fresh JWT token
+python get_jwt.py
+
+# Test authentication
+curl -H "Authorization: Bearer $(cat tmp_jwt.txt)" http://localhost:8000/v1/analyses
+```
+
+**Database Connection Issues:**
+```bash
+# Check environment variables
+cat .env | grep SUPABASE
+
+# Test database connectivity in Python
+python -c "from app.core.config import supabase_client; print(supabase_client.table('analyses').select('*').limit(1).execute())"
+```
+
 ## 📁 Project Structure
 
 ```
@@ -198,7 +276,9 @@ critiqueWire-backend/
 │   │   ├── config.py     # App configuration
 │   │   └── security.py   # JWT authentication
 │   ├── services/         # External service integrations
-│   │   └── openai_service.py  # OpenAI API integration
+│   │   ├── database_service.py  # Supabase database operations
+│   │   ├── openai_service.py    # OpenAI API integration
+│   │   └── background_service.py # Async task processing
 │   └── main.py           # FastAPI app initialization
 ├── docs/                 # API documentation and specifications
 │   ├── api-specification.md
@@ -207,7 +287,70 @@ critiqueWire-backend/
 ├── requirements.txt      # Python dependencies
 ├── Dockerfile           # Docker configuration
 ├── TODO.md              # Development roadmap and priorities
+├── get_jwt.py           # JWT token generator for testing
+├── tmp_jwt.txt          # Generated JWT token (for testing)
 └── README.md            # This file
+```
+
+## 🧪 Testing the API
+
+### Quick Health Check
+```bash
+curl http://localhost:8000/v1/health
+```
+
+### Test Authentication
+```bash
+# Generate JWT token
+python get_jwt.py
+
+# Test authenticated endpoint
+curl -H "Authorization: Bearer $(cat tmp_jwt.txt)" \
+     http://localhost:8000/v1/analyses
+```
+
+### Test Complete Analysis Flow
+```bash
+# 1. Create analysis (async)
+curl -X POST "http://localhost:8000/v1/analyses" \
+  -H "Authorization: Bearer $(cat tmp_jwt.txt)" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Sample article content for analysis...",
+    "title": "Test Analysis",
+    "preset": "general",
+    "options": {
+      "includeBiasAnalysis": true,
+      "includeFactCheck": true,
+      "includeExecutiveSummary": true
+    },
+    "async_mode": true
+  }'
+
+# 2. Retrieve analysis (use the analysisId from step 1)
+curl -H "Authorization: Bearer $(cat tmp_jwt.txt)" \
+     "http://localhost:8000/v1/analyses/{analysis_id}"
+```
+
+### Test URL Analysis
+```bash
+curl -X POST "http://localhost:8000/v1/analyses" \
+  -H "Authorization: Bearer $(cat tmp_jwt.txt)" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com/news-article",
+    "title": "URL Analysis Test",
+    "preset": "political",
+    "async_mode": true
+  }'
+```
+
+### Verify Database Integration
+```bash
+# Test that analyses are properly stored and retrieved
+# Create multiple analyses and test filtering/pagination
+curl -H "Authorization: Bearer $(cat tmp_jwt.txt)" \
+     "http://localhost:8000/v1/analyses?limit=10&preset=general"
 ```
 
 ## 🔄 API Evolution
@@ -229,9 +372,12 @@ See `docs/openapi_refinement_v*.md` for detailed evolution history.
 - Analysis history and presets management
 - Export and share functionality
 - API consistency and standardization (v0.4)
-- **Database integration with Supabase (v0.5)**
+- **Full database integration with Supabase (v0.5)**
+- **Fixed all response validation errors and schema compliance**
+- **JWT authentication with row-level security**
 - **Background task processing for async analyses**
-- **Real-time status updates via database polling**
+- **Complete create/retrieve analysis flow with proper error handling**
+- **Metadata field mapping and consistency fixes**
 
 ### 🔄 In Progress
 - URL content extraction improvements
