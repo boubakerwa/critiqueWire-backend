@@ -2,6 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import endpoints as api_v1
 from app.core.config import settings
+from app.services.scheduler_service import scheduler_service
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Define common error responses for the OpenAPI schema
 responses = {
@@ -26,6 +32,28 @@ app.add_middleware(
 )
 
 app.include_router(api_v1.router, prefix=settings.API_V1_STR)
+
+@app.on_event("startup")
+async def startup_event():
+    """Start background services when the application starts."""
+    try:
+        logger.info("Starting CritiqueWire Backend services...")
+        await scheduler_service.start()
+        logger.info("Background scheduler started successfully")
+    except Exception as e:
+        logger.error(f"Failed to start background services: {e}")
+        # Don't prevent the app from starting if scheduler fails
+        # This allows the API to work even if RSS collection is not available
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Stop background services when the application shuts down."""
+    try:
+        logger.info("Stopping CritiqueWire Backend services...")
+        await scheduler_service.stop()
+        logger.info("Background scheduler stopped successfully")
+    except Exception as e:
+        logger.error(f"Error stopping background services: {e}")
 
 @app.get("/")
 def read_root():

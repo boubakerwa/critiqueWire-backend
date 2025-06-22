@@ -3,13 +3,17 @@ from app.api.v1 import schemas
 from app.core.security import get_current_user, get_current_user_with_token
 from app.services.openai_service import openai_service
 from app.services.database_service import database_service
+from app.services.content_extraction_service import content_extraction_service
 from app.core.config import settings
 import datetime
 import asyncio
+import logging
 import time
 import uuid
 from typing import List, Optional
 from urllib.parse import urlparse
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -175,6 +179,98 @@ async def process_analysis_background(
         except Exception as update_error:
             print(f"[ERROR] Exception while updating analysis {analysis_id} to failed status: {update_error}")
             traceback.print_exc()
+
+# --- Content Extraction Endpoints ---
+
+@router.post(
+    "/content/extract",
+    response_model=schemas.ContentExtractionResponse,
+    tags=["Content Extraction"],
+    openapi_extra={
+        "requestBody": {
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "cnn_article": {
+                            "summary": "Extract CNN Article",
+                            "value": {
+                                "url": "https://www.cnn.com/2024/01/15/politics/example-news-article"
+                            }
+                        },
+                        "bbc_article": {
+                            "summary": "Extract BBC Article",
+                            "value": {
+                                "url": "https://www.bbc.com/news/world-12345678"
+                            }
+                        },
+                        "local_news": {
+                            "summary": "Extract Local News Article",
+                            "value": {
+                                "url": "https://www.localnews.com/articles/breaking-news-story"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+)
+async def extract_content(
+    request: schemas.ContentExtractionRequest,
+    user: dict = Depends(get_current_user),
+):
+    """
+    Extract content from a news article URL.
+    
+    This endpoint extracts the main content, metadata, and images from news articles
+    using multiple extraction strategies to ensure the best possible results.
+    
+    **Features:**
+    - Extracts title, content, author, and publication date
+    - Handles various news website formats (CNN, BBC, local news sites)
+    - Returns clean, readable text without ads or navigation
+    - Provides meaningful error messages for inaccessible URLs
+    - Extraction completes within 10 seconds
+    - Supports both HTTP and HTTPS URLs
+    - Uses multiple extraction strategies for reliability
+    
+    **Error Handling:**
+    - Invalid URL format → Returns 400 with clear error message
+    - Non-existent URLs (404) → Returns appropriate error
+    - Timeout errors → Returns timeout message
+    - Extraction failures → Returns detailed error information
+    """
+    try:
+        result = await content_extraction_service.extract_content(request.url)
+        
+        if result['status'] == 'error':
+            error_info = result['error']
+            if error_info['code'] == 'INVALID_URL':
+                raise HTTPException(status_code=400, detail=error_info['message'])
+            elif error_info['code'] == 'HTTP_ERROR':
+                raise HTTPException(status_code=502, detail=error_info['message'])
+            elif error_info['code'] == 'TIMEOUT':
+                raise HTTPException(status_code=504, detail=error_info['message'])
+            elif error_info['code'] == 'EXTRACTION_FAILED':
+                raise HTTPException(status_code=422, detail=error_info['message'])
+            else:
+                raise HTTPException(status_code=500, detail=error_info['message'])
+        
+        return schemas.ContentExtractionResponse(
+            status="success",
+            data=schemas.ExtractedContent(**result['data'])
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Unexpected error in content extraction: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500, 
+            detail="An unexpected error occurred during content extraction. Please try again."
+        )
 
 async def delayed_background_processing(
     analysis_id: str,
@@ -1359,4 +1455,289 @@ async def test_complete_analysis(
         print(f"[ERROR] Test complete failed: {e}")
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Database update error: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Database update error: {str(e)}")
+
+# --- RSS News Feed Endpoints ---
+
+@router.get(
+    "/news-feed",
+    response_model=schemas.NewsFeedResponse,
+    tags=["News Feed"],
+    summary="Get news feed articles",
+    description="Retrieve paginated news articles from RSS feeds and manual submissions"
+)
+async def get_news_feed(
+    page: int = Query(default=1, ge=1, description="Page number"),
+    limit: int = Query(default=20, ge=1, le=100, description="Number of articles per page"),
+    rss_only: bool = Query(default=False, description="Show only RSS-collected articles"),
+    source: Optional[str] = Query(default=None, description="Filter by source name"),
+    search: Optional[str] = Query(default=None, description="Search in title and summary"),
+    user: dict = Depends(get_current_user),
+):
+    """
+    Get paginated news feed with filtering options.
+    
+    - **page**: Page number (starts from 1)
+    - **limit**: Number of articles per page (1-100)
+    - **rss_only**: If true, only show RSS-collected articles
+    - **source**: Filter by source name (partial match)
+    - **search**: Search term for title and summary
+    """
+    try:
+        from app.services.rss_collection_service import rss_collection_service
+        
+        result = await rss_collection_service.get_news_feed(
+            page=page,
+            limit=limit,
+            rss_only=rss_only,
+            source=source,
+            search=search
+        )
+        
+        return {
+            "status": "success",
+            "data": result,
+            "timestamp": datetime.datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting news feed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get news feed: {str(e)}")
+
+@router.post(
+    "/news-feed/articles/{article_id}/extract-content",
+    response_model=schemas.ContentExtractionResponse,
+    tags=["News Feed"],
+    summary="Extract full content for RSS article",
+    description="Extract and store full content for an RSS article using URL extraction"
+)
+async def extract_rss_article_content(
+    article_id: str,
+    user: dict = Depends(get_current_user),
+):
+    """
+    Extract full content for an RSS article.
+    
+    This endpoint:
+    1. Gets the article URL from the database
+    2. Extracts full content using the content extraction service
+    3. Updates the article with the extracted content and images
+    4. Returns the extracted content
+    """
+    try:
+        from app.services.rss_collection_service import rss_collection_service
+        
+        result = await rss_collection_service.extract_article_content(article_id)
+        
+        if not result:
+            raise HTTPException(status_code=404, detail="Article not found or content extraction failed")
+        
+        return {
+            "status": "success",
+            "data": result,
+            "timestamp": datetime.datetime.utcnow().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error extracting content for article {article_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Content extraction failed: {str(e)}")
+
+@router.post(
+    "/news-feed/articles/{article_id}/analyze",
+    response_model=schemas.AnalysisResultsResponse,
+    tags=["News Feed"],
+    summary="Analyze RSS article",
+    description="Start analysis for an RSS article"
+)
+async def analyze_rss_article(
+    article_id: str,
+    request: schemas.RSSArticleAnalysisRequest,
+    auth_data: dict = Depends(get_current_user_with_token),
+):
+    """
+    Analyze an RSS article.
+    
+    This endpoint:
+    1. Gets the article from the database
+    2. Extracts content if needed
+    3. Starts the analysis process
+    4. Returns analysis results or status
+    """
+    try:
+        user = auth_data["user"]
+        user_id = getattr(user, 'id', 'user-123')
+        jwt_token = auth_data["token"]
+        
+        # Get article from database
+        article = await database_service.fetch_one(
+            "SELECT * FROM articles WHERE id = $1",
+            article_id
+        )
+        
+        if not article:
+            raise HTTPException(status_code=404, detail="Article not found")
+        
+        # Use article content or extract if needed
+        content = article['content']
+        
+        # If content is just the title placeholder, extract full content
+        if content and "(Click to read full article)" in content:
+            from app.services.rss_collection_service import rss_collection_service
+            extracted = await rss_collection_service.extract_article_content(article_id)
+            if extracted:
+                content = extracted['content']
+        
+        if not content or len(content.strip()) < 100:
+            raise HTTPException(status_code=400, detail="Article content too short for analysis")
+        
+        analysis_id = str(uuid.uuid4())
+        
+        # Convert options to analysis types list
+        analysis_types = []
+        if request.options.includeBiasAnalysis:
+            analysis_types.append("bias")
+        if request.options.includeSentimentAnalysis:
+            analysis_types.append("sentiment")
+        if request.options.includeFactCheck:
+            analysis_types.append("factCheck")
+        if request.options.includeClaimExtraction:
+            analysis_types.append("claimExtraction")
+        if request.options.includeExecutiveSummary:
+            analysis_types.append("executiveSummary")
+        
+        # Store initial analysis record
+        await database_service.create_analysis(
+            analysis_id=analysis_id,
+            user_id=user_id,
+            content=content,
+            analysis_types=analysis_types,
+            content_type="article",
+            preset=request.preset,
+            jwt_token=jwt_token,
+            title=article['title'],
+            url=article['url'],
+            article_id=article_id
+        )
+        
+        # Update article analysis status
+        await database_service.execute_query(
+            "UPDATE articles SET analysis_status = $1, analysis_id = $2 WHERE id = $3",
+            "pending",
+            analysis_id,
+            article_id
+        )
+        
+        # Start background processing
+        asyncio.create_task(
+            process_analysis_background(
+                analysis_id=analysis_id,
+                user_id=user_id,
+                content=content,
+                analysis_types=analysis_types,
+                preset=request.preset,
+                options=request.options,
+                url=article['url'],
+                jwt_token=jwt_token
+            )
+        )
+        
+        return {
+            "status": "success",
+            "data": {
+                "analysisId": analysis_id,
+                "articleId": article_id,
+                "analysisType": "article",
+                "status": "pending",
+                "results": None,
+                "metadata": schemas.AnalysisMetadata(
+                    processingTime=0,
+                    preset=request.preset,
+                    wordsAnalyzed=len(content.split()),
+                    createdAt=datetime.datetime.utcnow()
+                )
+            },
+            "timestamp": datetime.datetime.utcnow().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error analyzing article {article_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+@router.get(
+    "/news-feed/sources",
+    response_model=schemas.RSSSourcesResponse,
+    tags=["News Feed"],
+    summary="Get available RSS sources",
+    description="Get list of configured RSS news sources"
+)
+async def get_rss_sources(user: dict = Depends(get_current_user)):
+    """Get list of available RSS sources."""
+    try:
+        from app.services.rss_collection_service import rss_collection_service
+        
+        sources = rss_collection_service.get_available_sources()
+        
+        return {
+            "status": "success",
+            "data": {
+                "sources": sources,
+                "total": len(sources)
+            },
+            "timestamp": datetime.datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting RSS sources: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get sources: {str(e)}")
+
+# Admin endpoints for RSS management
+@router.post(
+    "/admin/rss/collect",
+    response_model=schemas.RSSCollectionResponse,
+    tags=["Admin"],
+    summary="Trigger RSS collection",
+    description="Manually trigger RSS feed collection (admin only)"
+)
+async def trigger_rss_collection(user: dict = Depends(get_current_user)):
+    """Manually trigger RSS collection from all feeds."""
+    try:
+        from app.services.rss_collection_service import rss_collection_service
+        
+        stats = await rss_collection_service.collect_all_feeds()
+        
+        return {
+            "status": "success",
+            "data": stats,
+            "timestamp": datetime.datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in RSS collection: {e}")
+        raise HTTPException(status_code=500, detail=f"RSS collection failed: {str(e)}")
+
+@router.get(
+    "/admin/scheduler/status",
+    tags=["Admin"],
+    summary="Get scheduler status",
+    description="Get status of background scheduler jobs"
+)
+async def get_scheduler_status(user: dict = Depends(get_current_user)):
+    """Get status of background scheduler."""
+    try:
+        from app.services.scheduler_service import scheduler_service
+        
+        status = scheduler_service.get_job_status()
+        
+        return {
+            "status": "success",
+            "data": status,
+            "timestamp": datetime.datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting scheduler status: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get scheduler status: {str(e)}") 

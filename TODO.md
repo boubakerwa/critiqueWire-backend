@@ -173,31 +173,38 @@
    - Analysis status notifications
    - Real-time collaboration features
 
-4. **🆕 Automated News Collection & Display System** ⭐⭐⭐
-   - **News Collection Pipeline (Phase 1)**
-     - [ ] RSS feed integration for Tunisian news sources (no registration required)
-     - [ ] News API integrations as backup (Google News, NewsAPI, etc.)
-     - [ ] Scheduled background job (every 10-15 minutes)
-     - [ ] Content extraction and normalization from RSS feeds
-     - [ ] Media extraction (thumbnails, images, videos from RSS)
-   - **Content Storage & Display**
-     - [ ] Article storage with metadata (headline, summary, source, timestamp)
-     - [ ] Media storage and optimization (images, thumbnails)
-     - [ ] Duplicate article detection and consolidation
-     - [ ] Public news feed display (like a news aggregator)
-     - [ ] Source attribution and credibility indicators
-   - **On-Demand Analysis System**
-     - [ ] "Analyze" button for each article
-     - [ ] Async analysis execution only when user requests
-     - [ ] Analysis result caching - once analyzed, show to all users
-     - [ ] Analysis status tracking (pending/completed/failed)
-     - [ ] Cost optimization through smart caching
-   - **User Experience Features**
-     - [ ] News feed browsing and filtering
-     - [ ] Search functionality across collected articles
-     - [ ] Source filtering and preferences
-     - [ ] Analysis history and popular analyses
-     - [ ] Trending articles and most-analyzed content
+## **✅ COMPLETED: RSS News Collection System (Epic 2)**
+-   [x] ~~**News Collection Pipeline:**~~
+    -   [x] ~~RSS feed integration for 10 Tunisian news sources~~
+    -   [x] ~~Background scheduled collection every 15 minutes~~
+    -   [x] ~~Content extraction and normalization from RSS feeds~~
+    -   [x] ~~Article deduplication using URL and content hash~~
+    -   [x] ~~Automatic cleanup of old articles (30 days retention)~~
+-   [x] ~~**Database Integration:**~~
+    -   [x] ~~Created collected_articles table with proper indexing~~
+    -   [x] ~~Full-text search support for articles~~
+    -   [x] ~~Analysis status tracking per article~~
+    -   [x] ~~Foreign key integration with analyses table~~
+-   [x] ~~**News Feed API:**~~
+    -   [x] ~~GET /v1/news-feed endpoint with pagination~~
+    -   [x] ~~Filtering by source, date range, and search terms~~
+    -   [x] ~~GET /v1/news-feed/sources for available sources~~
+    -   [x] ~~Comprehensive error handling and logging~~
+-   [x] ~~**On-Demand Analysis System:**~~
+    -   [x] ~~POST /v1/news-feed/articles/{id}/analyze endpoint~~
+    -   [x] ~~Automatic content extraction before analysis~~
+    -   [x] ~~Analysis result caching (shared across users)~~
+    -   [x] ~~Integration with existing background processing system~~
+-   [x] ~~**Background Services:**~~
+    -   [x] ~~APScheduler integration for RSS collection~~
+    -   [x] ~~Startup/shutdown event handlers in FastAPI app~~
+    -   [x] ~~Manual RSS collection trigger for admins~~
+    -   [x] ~~Scheduler status monitoring endpoints~~
+-   [x] ~~**Testing & Documentation:**~~
+    -   [x] ~~Comprehensive test script (test_rss_collection.py)~~
+    -   [x] ~~Database migration script for new tables~~
+    -   [x] ~~API documentation with OpenAPI schemas~~
+    -   [x] ~~RSS feed source configuration and management~~
 
 ## 🚀 FUTURE: LangGraph Integration Planning
 

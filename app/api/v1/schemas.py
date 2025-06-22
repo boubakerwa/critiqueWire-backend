@@ -428,6 +428,137 @@ class ChatMessageResponse(ResponseModel):
     status: Literal["success"] = "success"
     data: ChatMessageResponseData
 
+# --- Content Extraction Schemas ---
+
+class ContentExtractionRequest(BaseModel):
+    url: str = Field(..., description="The URL of the article to extract content from")
+
+class ExtractedContent(BaseModel):
+    title: str = Field(..., description="Article title")
+    content: str = Field(..., description="Full article text content")
+    author: Optional[str] = Field(None, description="Article author")
+    publishDate: Optional[str] = Field(None, description="Publication date in ISO format")
+    images: List[str] = Field(default_factory=list, description="List of image URLs from the article")
+    description: Optional[str] = Field(None, description="Article description/summary")
+    wordCount: int = Field(..., description="Number of words in the article")
+    readingTime: int = Field(..., description="Estimated reading time in minutes")
+    extractionStrategy: str = Field(..., description="The extraction strategy that was used")
+    processingTime: float = Field(..., description="Processing time in seconds")
+
+class ContentExtractionResponse(ResponseModel):
+    status: Literal["success"] = "success"
+    data: ExtractedContent
+    timestamp: str = Field(default_factory=lambda: datetime.datetime.now().isoformat())
+
 # Forward reference resolution
 AnalysisPreset.model_rebuild()
-CreatePresetRequest.model_rebuild() 
+CreatePresetRequest.model_rebuild()
+
+# --- RSS News Feed Schemas ---
+
+class CollectedArticle(BaseModel):
+    """Unified article schema for both RSS-collected and manual articles."""
+    # Original articles table columns (always present)
+    id: str = Field(..., description="Article UUID (primary key)")
+    title: str = Field(..., description="Article title")
+    content: str = Field(..., description="Article content (always available - uses title as fallback for RSS)")
+    url: str = Field(..., description="Article URL")
+    source_name: str = Field(..., description="News source name")
+    author: Optional[str] = Field(None, description="Article author")
+    published_at: Optional[str] = Field(None, description="Publication date")
+    image_url: Optional[str] = Field(None, description="Original image URL (for manual articles)")
+    created_at: str = Field(..., description="Creation timestamp")
+    updated_at: str = Field(..., description="Last update timestamp")
+    
+    # RSS-specific columns (will be NULL for manual articles)
+    summary: Optional[str] = Field(None, description="Article summary/excerpt (RSS)")
+    source_url: Optional[str] = Field(None, description="RSS feed URL")
+    collected_at: Optional[str] = Field(None, description="RSS collection timestamp (NULL for manual)")
+    content_hash: Optional[str] = Field(None, description="Content hash for deduplication")
+    images: List[str] = Field(default_factory=list, description="Multiple article images (RSS)")
+    word_count: Optional[int] = Field(None, description="Word count (if content extracted)")
+    reading_time: Optional[int] = Field(None, description="Reading time in minutes")
+    content_extracted_at: Optional[str] = Field(None, description="Content extraction timestamp")
+    analysis_status: Literal["not_analyzed", "pending", "completed", "failed"] = Field(
+        default="not_analyzed", description="Analysis status"
+    )
+    analysis_id: Optional[str] = Field(None, description="Analysis ID if analyzed")
+    thumbnail_url: Optional[str] = Field(None, description="RSS thumbnail (different from image_url)")
+
+class NewsFeedPagination(BaseModel):
+    current_page: int = Field(..., description="Current page number")
+    total_pages: int = Field(..., description="Total number of pages")
+    total_articles: int = Field(..., description="Total number of articles")
+    has_next: bool = Field(..., description="Whether there are more pages")
+    has_prev: bool = Field(..., description="Whether there are previous pages")
+
+class NewsFeedData(BaseModel):
+    articles: List[CollectedArticle] = Field(..., description="List of news articles")
+    pagination: NewsFeedPagination = Field(..., description="Pagination information")
+
+class NewsFeedResponse(ResponseModel):
+    status: Literal["success"] = "success"
+    data: NewsFeedData
+
+class AnalyzeArticleRequest(BaseModel):
+    preset: Literal["general", "political", "financial", "scientific", "opinion"] = Field(
+        default="general", description="Analysis preset to use"
+    )
+    options: AnalysisOptions = Field(default_factory=AnalysisOptions, description="Analysis options")
+
+class ArticleAnalysisData(BaseModel):
+    analysis_id: str = Field(..., description="Analysis ID")
+    status: Literal["pending", "completed", "failed"] = Field(..., description="Analysis status")
+    estimated_completion_time: Optional[str] = Field(None, description="Estimated completion time")
+
+class ArticleAnalysisResponse(ResponseModel):
+    status: Literal["success"] = "success"
+    data: ArticleAnalysisData
+
+class RSSCollectionStats(BaseModel):
+    timestamp: str = Field(..., description="Collection timestamp")
+    processing_time: float = Field(..., description="Processing time in seconds")
+    feeds_processed: int = Field(..., description="Number of feeds processed")
+    total_articles_found: int = Field(..., description="Total articles found")
+    new_articles_stored: int = Field(..., description="New articles stored")
+    errors: List[str] = Field(default_factory=list, description="Collection errors")
+
+class RSSCollectionResponse(ResponseModel):
+    status: Literal["success"] = "success"
+    data: RSSCollectionStats
+
+class SchedulerJob(BaseModel):
+    id: str = Field(..., description="Job ID")
+    name: str = Field(..., description="Job name")
+    next_run: Optional[str] = Field(None, description="Next run time")
+    trigger: str = Field(..., description="Job trigger description")
+
+class SchedulerStatus(BaseModel):
+    status: Literal["running", "stopped", "not_started"] = Field(..., description="Scheduler status")
+    jobs: List[SchedulerJob] = Field(..., description="List of scheduled jobs")
+
+class SchedulerStatusResponse(ResponseModel):
+    status: Literal["success"] = "success"
+    data: SchedulerStatus
+
+class AvailableSourcesData(BaseModel):
+    sources: List[str] = Field(..., description="Available news sources")
+
+class AvailableSourcesResponse(ResponseModel):
+    status: Literal["success"] = "success"
+    data: AvailableSourcesData
+
+# Missing schemas for RSS endpoints
+class RSSArticleAnalysisRequest(BaseModel):
+    preset: Literal["general", "political", "financial", "scientific", "opinion"] = Field(
+        default="general", description="Analysis preset to use"
+    )
+    options: AnalysisOptions = Field(default_factory=AnalysisOptions, description="Analysis options")
+
+class RSSSourcesData(BaseModel):
+    sources: List[str] = Field(..., description="Available RSS sources")
+    total: int = Field(..., description="Total number of sources")
+
+class RSSSourcesResponse(ResponseModel):
+    status: Literal["success"] = "success"
+    data: RSSSourcesData 

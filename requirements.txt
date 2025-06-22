@@ -10,3 +10,15 @@ requests
 python-jose[cryptography]
 passlib[bcrypt]
 python-multipart
+# URL Content Extraction dependencies
+newspaper3k
+beautifulsoup4
+readability-lxml
+aiohttp
+lxml
+html5lib
+python-dateutil
+# RSS Feed Collection dependencies
+feedparser
+apscheduler
+pytz
