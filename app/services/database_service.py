@@ -120,6 +120,58 @@ class DatabaseService:
             print(f"Error retrieving analysis: {e}")
             return None
     
+    async def get_analysis_content_and_metadata(self, analysis_id: str, user_id: str, jwt_token: str = None) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve the full content and metadata for an analysis (for background processing).
+        
+        Args:
+            analysis_id: The analysis ID
+            user_id: The user ID
+            jwt_token: Optional JWT token for authentication
+            
+        Returns:
+            Dictionary with content, metadata, and options or None if not found
+        """
+        try:
+            # Use JWT token for authentication if provided
+            if jwt_token:
+                client = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+                try:
+                    client.auth.set_session(jwt_token, jwt_token)
+                except Exception as e:
+                    print(f"[DEBUG] Failed to set session: {e}")
+                    if hasattr(client, 'postgrest'):
+                        client.postgrest.session.headers.update({"Authorization": f"Bearer {jwt_token}"})
+            else:
+                client = self.supabase
+            
+            result = client.table("analyses").select("content, metadata, preset, url").eq("id", analysis_id).eq("user_id", user_id).execute()
+            
+            if result.data:
+                record = result.data[0]
+                metadata = record.get("metadata", {})
+                
+                # Ensure metadata is a dict
+                if isinstance(metadata, str):
+                    try:
+                        import json
+                        metadata = json.loads(metadata)
+                    except:
+                        metadata = {}
+                
+                return {
+                    "content": record.get("content", ""),
+                    "preset": record.get("preset", "general"),
+                    "url": record.get("url"),
+                    "analysis_types": metadata.get("original_analysis_types", [])
+                }
+            else:
+                return None
+                
+        except Exception as e:
+            print(f"Error retrieving analysis content: {e}")
+            return None
+    
     async def get_user_analyses(
         self, 
         user_id: str, 
@@ -321,6 +373,7 @@ class DatabaseService:
                 "status": "pending",
                 "article_id": article_id,
                 "url": url,
+                "content": content,  # Store full content for analysis processing
                 "content_preview": content[:500] if content else "",
                 "results": None,
                 "metadata": {

@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS analyses (
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
     article_id UUID,
     url TEXT,
-    content_preview TEXT,
+    content TEXT,  -- Full content for analysis processing
+    content_preview TEXT,  -- Truncated content for display
     results JSONB,
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -74,4 +75,8 @@ SELECT
     AVG((results->>'analysisScore')::float) FILTER (WHERE results IS NOT NULL) as avg_analysis_score,
     MAX(created_at) as last_analysis_date
 FROM analyses
-GROUP BY user_id; 
+GROUP BY user_id;
+
+-- Migration: Add content column to existing table if it doesn't exist
+-- This is safe to run multiple times
+ALTER TABLE analyses ADD COLUMN IF NOT EXISTS content TEXT; 

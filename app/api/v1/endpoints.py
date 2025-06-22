@@ -29,6 +29,18 @@ async def process_analysis_background(
         print(f"[DEBUG] Starting background processing for analysis {analysis_id}")
         start_time = time.time()
         
+        # Retrieve full content and metadata from database to ensure we have complete data
+        db_data = await database_service.get_analysis_content_and_metadata(analysis_id, user_id, jwt_token)
+        if db_data:
+            # Use content from database (which should be complete)
+            content = db_data["content"] or content  # Fallback to passed content if db content is empty
+            preset = db_data["preset"] or preset
+            url = db_data["url"] or url
+            analysis_types = db_data["analysis_types"] or analysis_types
+            print(f"[DEBUG] Retrieved content from database: {len(content)} characters")
+        else:
+            print(f"[DEBUG] Could not retrieve content from database, using passed content: {len(content)} characters")
+        
         # Build analysis tasks based on options
         tasks = {}
         
@@ -199,12 +211,28 @@ async def trigger_analysis_processing(
     if analysis_data["data"]["status"] != "pending":
         raise HTTPException(status_code=400, detail=f"Analysis is not pending (current status: {analysis_data['data']['status']})")
     
-    # Mock content and options for processing (since we don't store full options in DB yet)
-    content = "Mock content for manual processing trigger"
+    # Get the real content and metadata from database
+    db_data = await database_service.get_analysis_content_and_metadata(analysis_id, user_id, auth_data["token"])
+    
+    if not db_data:
+        raise HTTPException(status_code=500, detail="Could not retrieve analysis content from database")
+    
+    content = db_data["content"]
+    preset = db_data["preset"]
+    url = db_data["url"]
+    analysis_types = db_data["analysis_types"]
+    
+    if not content:
+        raise HTTPException(status_code=500, detail="No content found for analysis")
+    
+    # Create options based on stored analysis types
     options = schemas.AnalysisOptions(
-        includeBiasAnalysis=True,
-        includeExecutiveSummary=True,
-        includeFactCheck=True
+        includeBiasAnalysis="bias" in analysis_types,
+        includeSentimentAnalysis="sentiment" in analysis_types,
+        includeFactCheck="factCheck" in analysis_types,
+        includeClaimExtraction="claimExtraction" in analysis_types,
+        includeSourceCredibility="sourceCredibility" in analysis_types,
+        includeExecutiveSummary="executiveSummary" in analysis_types
     )
     
     # Start background processing
@@ -213,10 +241,10 @@ async def trigger_analysis_processing(
             analysis_id=analysis_id,
             user_id=user_id,
             content=content,
-            analysis_types=["bias", "executiveSummary", "factCheck"],
-            preset="general",
+            analysis_types=analysis_types,
+            preset=preset,
             options=options,
-            url=None,
+            url=url,
             jwt_token=auth_data["token"]
         )
     )
