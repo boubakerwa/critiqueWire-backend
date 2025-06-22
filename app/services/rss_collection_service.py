@@ -55,17 +55,15 @@ class RSSCollectionService:
             return dt.isoformat()
         return str(dt)
     
-    def _extract_images_from_rss_entry(self, entry) -> List[str]:
-        """Extract images from RSS entry (media enclosures, thumbnails, etc.)."""
-        images = []
-        
-        # Check for media thumbnail
+    def _extract_main_image_from_rss_entry(self, entry) -> Optional[str]:
+        """Extract the main image from RSS entry (single image only)."""
+        # Priority 1: media thumbnail
         if hasattr(entry, 'media_thumbnail') and entry.media_thumbnail:
             for thumb in entry.media_thumbnail:
                 if 'url' in thumb:
-                    images.append(thumb['url'])
+                    return thumb['url']
         
-        # Check for media content
+        # Priority 2: media content
         if hasattr(entry, 'media_content') and entry.media_content:
             for media in entry.media_content:
                 if 'url' in media:
@@ -82,15 +80,15 @@ class RSSCollectionService:
                     )
                     
                     if is_image:
-                        images.append(media_url)
+                        return media_url
         
-        # Check enclosures
+        # Priority 3: enclosures
         if hasattr(entry, 'enclosures') and entry.enclosures:
             for enclosure in entry.enclosures:
                 if enclosure.get('type', '').startswith('image'):
-                    images.append(enclosure.get('href', ''))
+                    return enclosure.get('href', '')
         
-        # Look for images in description HTML
+        # Priority 4: images in description HTML
         if hasattr(entry, 'description'):
             import re
             from bs4 import BeautifulSoup
@@ -99,29 +97,12 @@ class RSSCollectionService:
                 img_tags = soup.find_all('img')
                 for img in img_tags:
                     src = img.get('src')
-                    if src:
-                        images.append(src)
+                    if src and src.startswith('http'):
+                        return src
             except:
                 pass
         
-        # Clean and deduplicate images
-        clean_images = []
-        for img_url in images:
-            if img_url and img_url.startswith('http'):
-                if img_url not in clean_images:
-                    clean_images.append(img_url)
-        
-        return clean_images[:5]  # Limit to 5 images
-    
-    def _extract_thumbnail_from_rss_entry(self, entry) -> Optional[str]:
-        """Extract the main thumbnail from RSS entry."""
-        # Try media thumbnail first
-        if hasattr(entry, 'media_thumbnail') and entry.media_thumbnail:
-            return entry.media_thumbnail[0].get('url')
-        
-        # Try first image from images list
-        images = self._extract_images_from_rss_entry(entry)
-        return images[0] if images else None
+        return None
     
     def _clean_text(self, text: str) -> str:
         """Clean HTML tags and extra whitespace from text."""
@@ -196,9 +177,8 @@ class RSSCollectionService:
                         if hasattr(entry, 'published'):
                             published_at = self._parse_date(entry.published)
                         
-                        # Extract images
-                        images = self._extract_images_from_rss_entry(entry)
-                        thumbnail_url = self._extract_thumbnail_from_rss_entry(entry)
+                        # Extract main image
+                        image_url = self._extract_main_image_from_rss_entry(entry)
                         
                         # Generate content hash for deduplication
                         content_hash = self._generate_content_hash(title, link)
@@ -212,8 +192,7 @@ class RSSCollectionService:
                             'source_name': source_name,
                             'source_url': url,
                             'content_hash': content_hash,
-                            'images': images,
-                            'thumbnail_url': thumbnail_url,
+                            'image_url': image_url,
                             'collected_at': datetime.now(timezone.utc)
                         }
                         
@@ -261,8 +240,7 @@ class RSSCollectionService:
                     "source_url": article['source_url'],
                     "collected_at": self._format_datetime(article['collected_at']),
                     "content_hash": article['content_hash'],
-                    "images": article.get('images', []),
-                    "thumbnail_url": article.get('thumbnail_url'),
+                    "image_url": article.get('image_url'),
                     "analysis_status": 'not_analyzed'
                 }
                 
@@ -360,7 +338,7 @@ class RSSCollectionService:
             # Build query
             query = database_service.supabase.table("articles").select(
                 "id, title, content, url, source_name, author, published_at, "
-                "summary, source_url, collected_at, images, thumbnail_url, "
+                "summary, source_url, collected_at, image_url, "
                 "analysis_status, analysis_id, created_at, updated_at"
             )
             
@@ -401,8 +379,7 @@ class RSSCollectionService:
                 "summary": article['summary'],
                 "source_url": article['source_url'],
                 "collected_at": self._format_datetime(article['collected_at']),
-                "images": article['images'] or [],
-                "thumbnail_url": article['thumbnail_url'],
+                "image_url": article['image_url'],
                 "analysis_status": article['analysis_status'],
                 "analysis_id": str(article['analysis_id']) if article['analysis_id'] else None,
                 "created_at": self._format_datetime(article['created_at']),
@@ -444,19 +421,22 @@ class RSSCollectionService:
             if extraction_result.get('status') == 'success':
                 data = extraction_result['data']
                 
-                # Merge existing images with newly extracted ones
-                existing_images = article.get('images', [])
-                new_images = data.get('images', [])
-                all_images = existing_images + [img for img in new_images if img not in existing_images]
+                # Use the first extracted image if no image exists yet
+                new_image_url = None
+                if not article.get('image_url') and data.get('images'):
+                    new_image_url = data['images'][0]
                 
                 # Update article with extracted content
                 update_data = {
                     "content": data['content'],
                     "word_count": data['wordCount'],
                     "reading_time": data['readingTime'],
-                    "content_extracted_at": datetime.now(timezone.utc).isoformat(),
-                    "images": all_images[:5]  # Limit to 5 images
+                    "content_extracted_at": datetime.now(timezone.utc).isoformat()
                 }
+                
+                # Add image URL if we found one
+                if new_image_url:
+                    update_data["image_url"] = new_image_url
                 
                 database_service.supabase.table("articles").update(update_data).eq("id", article_id).execute()
                 

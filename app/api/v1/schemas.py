@@ -466,7 +466,7 @@ class CollectedArticle(BaseModel):
     source_name: str = Field(..., description="News source name")
     author: Optional[str] = Field(None, description="Article author")
     published_at: Optional[str] = Field(None, description="Publication date")
-    image_url: Optional[str] = Field(None, description="Original image URL (for manual articles)")
+    image_url: Optional[str] = Field(None, description="Article image URL (single image for all articles)")
     created_at: str = Field(..., description="Creation timestamp")
     updated_at: str = Field(..., description="Last update timestamp")
     
@@ -475,7 +475,6 @@ class CollectedArticle(BaseModel):
     source_url: Optional[str] = Field(None, description="RSS feed URL")
     collected_at: Optional[str] = Field(None, description="RSS collection timestamp (NULL for manual)")
     content_hash: Optional[str] = Field(None, description="Content hash for deduplication")
-    images: List[str] = Field(default_factory=list, description="Multiple article images (RSS)")
     word_count: Optional[int] = Field(None, description="Word count (if content extracted)")
     reading_time: Optional[int] = Field(None, description="Reading time in minutes")
     content_extracted_at: Optional[str] = Field(None, description="Content extraction timestamp")
@@ -483,7 +482,6 @@ class CollectedArticle(BaseModel):
         default="not_analyzed", description="Analysis status"
     )
     analysis_id: Optional[str] = Field(None, description="Analysis ID if analyzed")
-    thumbnail_url: Optional[str] = Field(None, description="RSS thumbnail (different from image_url)")
 
 class NewsFeedPagination(BaseModel):
     current_page: int = Field(..., description="Current page number")
