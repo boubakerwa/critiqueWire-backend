@@ -1147,7 +1147,8 @@ async def unified_analysis(
                 analysis_types=analysis_types,
                 preset=request.preset,
                 options=request.options,
-                url=request.url
+                url=request.url,
+                jwt_token=jwt_token
             )
         )
         
