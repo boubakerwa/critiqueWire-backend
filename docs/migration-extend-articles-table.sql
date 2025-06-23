@@ -15,13 +15,16 @@ ADD COLUMN IF NOT EXISTS content_extracted_at TIMESTAMPTZ,
 ADD COLUMN IF NOT EXISTS analysis_status TEXT DEFAULT 'not_analyzed' 
     CHECK (analysis_status IN ('not_analyzed', 'pending', 'completed', 'failed')),
 ADD COLUMN IF NOT EXISTS analysis_id UUID REFERENCES analyses(id) ON DELETE SET NULL,
-ADD COLUMN IF NOT EXISTS thumbnail_url TEXT;  -- RSS thumbnail (different from existing image_url)
+ADD COLUMN IF NOT EXISTS thumbnail_url TEXT,  -- RSS thumbnail (different from existing image_url)
+ADD COLUMN IF NOT EXISTS language TEXT DEFAULT 'unknown' 
+    CHECK (language IN ('ar', 'fr', 'en', 'unknown'));  -- Arabic, French, English, or unknown
 
 -- Add indexes for RSS functionality (only new columns)
 CREATE INDEX IF NOT EXISTS idx_articles_collected_at ON articles(collected_at DESC);
 CREATE INDEX IF NOT EXISTS idx_articles_analysis_status ON articles(analysis_status);
 CREATE INDEX IF NOT EXISTS idx_articles_content_hash ON articles(content_hash);
 CREATE INDEX IF NOT EXISTS idx_articles_source_url ON articles(source_url);
+CREATE INDEX IF NOT EXISTS idx_articles_language ON articles(language);
 
 -- Enhance existing published_at index if it doesn't exist
 CREATE INDEX IF NOT EXISTS idx_articles_published_at ON articles(published_at DESC);
@@ -45,6 +48,7 @@ COMMENT ON COLUMN articles.content_extracted_at IS 'When full content was extrac
 COMMENT ON COLUMN articles.analysis_status IS 'Status of AI analysis (not_analyzed/pending/completed/failed)';
 COMMENT ON COLUMN articles.analysis_id IS 'Reference to analysis results if performed';
 COMMENT ON COLUMN articles.thumbnail_url IS 'Article thumbnail image (from RSS)';
+COMMENT ON COLUMN articles.language IS 'Language of the article';
 
 -- Update table comment
 COMMENT ON TABLE articles IS 'Unified articles table: manually added articles and RSS-collected articles';

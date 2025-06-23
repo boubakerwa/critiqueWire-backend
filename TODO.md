@@ -206,6 +206,37 @@
     -   [x] ~~API documentation with OpenAPI schemas~~
     -   [x] ~~RSS feed source configuration and management~~
 
+## **✅ COMPLETED: Multilingual Language Detection System (Epic 2.1)**
+-   [x] ~~**RSS Metadata Language Extraction:**~~
+    -   [x] ~~Extract language from RSS `<language>` elements at feed and entry levels~~
+    -   [x] ~~Support standard language codes (ar-TN, fr-FR, en-US, etc.)~~
+    -   [x] ~~Map language codes to system standard: Arabic (ar), French (fr), English (en), unknown~~
+-   [x] ~~**Content-Based Language Detection:**~~
+    -   [x] ~~Integrate `langdetect` library for automatic language identification~~
+    -   [x] ~~Analyze article titles and summaries for language detection~~
+    -   [x] ~~Handle mixed content and fallback scenarios~~
+    -   [x] ~~Smart text prioritization: summary → content → title~~
+-   [x] ~~**Database Schema Enhancement:**~~
+    -   [x] ~~Add `language` column to articles table with default 'unknown'~~
+    -   [x] ~~Apply migration to Supabase production database~~
+    -   [x] ~~Preserve existing data with proper defaults~~
+    -   [x] ~~Add proper indexing for filtering performance~~
+-   [x] ~~**API Language Filtering:**~~
+    -   [x] ~~Add `language` parameter to `/v1/news-feed` endpoint~~
+    -   [x] ~~Support filtering by: `ar`, `fr`, `en`, `unknown`~~
+    -   [x] ~~Fix pagination count calculation for filtered results~~
+    -   [x] ~~Update API documentation and schemas~~
+    -   [x] ~~Ensure backward compatibility with existing functionality~~
+-   [x] ~~**Language Detection Backfill:**~~
+    -   [x] ~~Create automated script to detect language for existing articles~~
+    -   [x] ~~Process 87 articles with 100% success rate (0 unknown remaining)~~
+    -   [x] ~~Final distribution: 81 Arabic, 38 French, 4 English articles~~
+    -   [x] ~~Validate API filtering works correctly with updated data~~
+-   [x] ~~**RSS Article Analysis Integration:**~~
+    -   [x] ~~Fix validation errors in RSS article analysis endpoint~~
+    -   [x] ~~Ensure multilingual content analysis works correctly~~
+    -   [x] ~~Test background processing for different languages~~
+
 ## 🚀 FUTURE: LangGraph Integration Planning
 
 ### **Phase 1: LangGraph Foundation (v0.6)** 🎯

@@ -478,6 +478,7 @@ class CollectedArticle(BaseModel):
     word_count: Optional[int] = Field(None, description="Word count (if content extracted)")
     reading_time: Optional[int] = Field(None, description="Reading time in minutes")
     content_extracted_at: Optional[str] = Field(None, description="Content extraction timestamp")
+    language: str = Field(default="unknown", description="Article language (ar, fr, en, unknown)")
     analysis_status: Literal["not_analyzed", "pending", "completed", "failed"] = Field(
         default="not_analyzed", description="Analysis status"
     )

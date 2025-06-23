@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for RSS news collection functionality.
+Test script for RSS collection functionality.
 
 This script tests the RSS collection service and database operations
 to ensure everything is working correctly.
@@ -13,6 +13,12 @@ from datetime import datetime
 
 # Add the app directory to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
+
+# Add the parent directory to the path so we can import our modules
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from app.services.rss_collection_service import rss_collection_service, RSSCollectionService
+from app.services.database_service import database_service
 
 async def test_rss_collection():
     """Test the RSS collection functionality."""
@@ -128,6 +134,35 @@ async def test_database_connection():
     
     return True
 
+async def test_language_detection():
+    """Test language detection functionality."""
+    print("=== Testing Language Detection ===")
+    
+    # Test content-based detection
+    service = RSSCollectionService()
+    
+    # Test Arabic text
+    arabic_text = "هذا نص باللغة العربية للاختبار"
+    detected = service._detect_language_from_content(arabic_text)
+    print(f"Arabic text detection: {detected}")
+    
+    # Test French text  
+    french_text = "Ceci est un texte en français pour tester la détection de langue"
+    detected = service._detect_language_from_content(french_text)
+    print(f"French text detection: {detected}")
+    
+    # Test English text
+    english_text = "This is an English text to test language detection functionality"
+    detected = service._detect_language_from_content(english_text)
+    print(f"English text detection: {detected}")
+    
+    # Test short text (should return unknown)
+    short_text = "Hi"
+    detected = service._detect_language_from_content(short_text)
+    print(f"Short text detection: {detected}")
+    
+    print("Language detection test completed!\n")
+
 async def main():
     """Main test function."""
     print("🧪 CritiqueWire RSS Collection Test Suite")
@@ -137,6 +172,9 @@ async def main():
     db_ok = await test_database_connection()
     
     if db_ok:
+        # Test language detection
+        await test_language_detection()
+        
         # Run RSS collection tests
         rss_ok = await test_rss_collection()
         

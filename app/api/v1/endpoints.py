@@ -1472,6 +1472,7 @@ async def get_news_feed(
     rss_only: bool = Query(default=False, description="Show only RSS-collected articles"),
     source: Optional[str] = Query(default=None, description="Filter by source name"),
     search: Optional[str] = Query(default=None, description="Search in title and summary"),
+    language: Optional[str] = Query(default=None, description="Filter by language (ar, fr, en, unknown)"),
     user: dict = Depends(get_current_user),
 ):
     """
@@ -1482,6 +1483,7 @@ async def get_news_feed(
     - **rss_only**: If true, only show RSS-collected articles
     - **source**: Filter by source name (partial match)
     - **search**: Search term for title and summary
+    - **language**: Filter by language (ar, fr, en, unknown)
     """
     try:
         from app.services.rss_collection_service import rss_collection_service
@@ -1491,7 +1493,8 @@ async def get_news_feed(
             limit=limit,
             rss_only=rss_only,
             source=source,
-            search=search
+            search=search,
+            language=language
         )
         
         return {
@@ -1571,13 +1574,14 @@ async def analyze_rss_article(
         jwt_token = auth_data["token"]
         
         # Get article from database
-        article = await database_service.fetch_one(
-            "SELECT * FROM articles WHERE id = $1",
-            article_id
-        )
+        result = database_service.supabase.table("articles").select("*").eq("id", article_id).execute()
         
-        if not article:
+        if not result.data:
             raise HTTPException(status_code=404, detail="Article not found")
+        
+        article = result.data[0]
+        
+
         
         # Use article content or extract if needed
         content = article['content']
@@ -1608,12 +1612,12 @@ async def analyze_rss_article(
             analysis_types.append("executiveSummary")
         
         # Store initial analysis record
-        await database_service.create_analysis(
+        analysis_created = await database_service.create_analysis(
             analysis_id=analysis_id,
             user_id=user_id,
             content=content,
             analysis_types=analysis_types,
-            content_type="article",
+            content_type="url",  # Fixed: should be "url" not "article"
             preset=request.preset,
             jwt_token=jwt_token,
             title=article['title'],
@@ -1621,13 +1625,18 @@ async def analyze_rss_article(
             article_id=article_id
         )
         
-        # Update article analysis status
-        await database_service.execute_query(
-            "UPDATE articles SET analysis_status = $1, analysis_id = $2 WHERE id = $3",
-            "pending",
-            analysis_id,
-            article_id
-        )
+        if not analysis_created:
+            raise HTTPException(status_code=500, detail="Failed to create analysis record")
+        
+        # Update article analysis status after analysis record is created
+        try:
+            database_service.supabase.table("articles").update({
+                "analysis_status": "pending",
+                "analysis_id": analysis_id
+            }).eq("id", article_id).execute()
+        except Exception as e:
+            logger.error(f"Failed to update article analysis status: {e}")
+            # Don't fail the request if this update fails
         
         # Start background processing
         asyncio.create_task(
@@ -1648,7 +1657,7 @@ async def analyze_rss_article(
             "data": {
                 "analysisId": analysis_id,
                 "articleId": article_id,
-                "analysisType": "article",
+                "analysisType": "url",  # Fixed: should be "url" not "article"
                 "status": "pending",
                 "results": None,
                 "metadata": schemas.AnalysisMetadata(

@@ -13,8 +13,14 @@ from typing import Dict, List, Any, Optional
 from urllib.parse import urljoin, urlparse
 import re
 
+from langdetect import detect, DetectorFactory
+from langdetect.lang_detect_exception import LangDetectException
+
 from app.services.database_service import database_service
 from app.services.content_extraction_service import ContentExtractionService
+
+# Set seed for consistent language detection results
+DetectorFactory.seed = 0
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +45,91 @@ class RSSCollectionService:
         
         # User agent for RSS requests
         self.user_agent = "Mozilla/5.0 (compatible; CritiqueWire/1.0; +https://critiquewire.com)"
+        
+        # Language code mapping
+        self.language_mapping = {
+            'ar': 'ar',    # Arabic
+            'fr': 'fr',    # French  
+            'en': 'en',    # English
+            'it': 'fr',    # Italian -> French (fallback for some mixed content)
+            'es': 'fr',    # Spanish -> French (fallback)
+        }
+    
+    def _detect_language_from_content(self, text: str) -> str:
+        """Detect language from article content using langdetect."""
+        if not text or len(text.strip()) < 20:
+            return 'unknown'
+        
+        try:
+            # Clean text for better detection
+            clean_text = self._clean_text(text)
+            if len(clean_text) < 20:
+                return 'unknown'
+            
+            detected = detect(clean_text)
+            return self.language_mapping.get(detected, 'unknown')
+        
+        except LangDetectException:
+            logger.debug(f"Could not detect language from content: {text[:100]}...")
+            return 'unknown'
+        except Exception as e:
+            logger.warning(f"Error in language detection: {e}")
+            return 'unknown'
+    
+    def _extract_language_from_rss_metadata(self, feed, entry) -> Optional[str]:
+        """Extract language from RSS feed metadata."""
+        # Priority 1: Entry-level language (xml:lang attribute)
+        if hasattr(entry, 'language') and entry.language:
+            lang_code = entry.language.lower()
+            if lang_code.startswith('ar'):
+                return 'ar'
+            elif lang_code.startswith('fr'):
+                return 'fr'
+            elif lang_code.startswith('en'):
+                return 'en'
+        
+        # Priority 2: Feed-level language
+        if hasattr(feed, 'feed') and hasattr(feed.feed, 'language') and feed.feed.language:
+            lang_code = feed.feed.language.lower()
+            if lang_code.startswith('ar'):
+                return 'ar'
+            elif lang_code.startswith('fr'):
+                return 'fr'
+            elif lang_code.startswith('en'):
+                return 'en'
+        
+        # Priority 3: Check for xml:lang in feed root
+        if hasattr(feed, 'feed') and hasattr(feed.feed, 'lang'):
+            lang_code = feed.feed.lang.lower()
+            if lang_code.startswith('ar'):
+                return 'ar'
+            elif lang_code.startswith('fr'):
+                return 'fr'
+            elif lang_code.startswith('en'):
+                return 'en'
+        
+        return None
+    
+    def _determine_article_language(self, feed, entry, title: str, summary: str) -> str:
+        """Determine article language using multiple strategies."""
+        # Strategy 1: RSS metadata
+        rss_language = self._extract_language_from_rss_metadata(feed, entry)
+        if rss_language:
+            logger.debug(f"Language from RSS metadata: {rss_language}")
+            return rss_language
+        
+        # Strategy 2: Content-based detection
+        # Combine title and summary for better detection
+        content_for_detection = f"{title} {summary}".strip()
+        if len(content_for_detection) >= 20:
+            detected_language = self._detect_language_from_content(content_for_detection)
+            if detected_language != 'unknown':
+                logger.debug(f"Language detected from content: {detected_language}")
+                return detected_language
+        
+        # Strategy 3: Source-based heuristics (fallback for Tunisian sources)
+        # Most Tunisian sources are either Arabic or French
+        return 'unknown'
     
     def _generate_content_hash(self, title: str, url: str) -> str:
         """Generate a hash for deduplication."""
@@ -180,6 +271,9 @@ class RSSCollectionService:
                         # Extract main image
                         image_url = self._extract_main_image_from_rss_entry(entry)
                         
+                        # Detect language
+                        language = self._determine_article_language(feed, entry, title, summary)
+                        
                         # Generate content hash for deduplication
                         content_hash = self._generate_content_hash(title, link)
                         
@@ -193,6 +287,7 @@ class RSSCollectionService:
                             'source_url': url,
                             'content_hash': content_hash,
                             'image_url': image_url,
+                            'language': language,
                             'collected_at': datetime.now(timezone.utc)
                         }
                         
@@ -241,6 +336,7 @@ class RSSCollectionService:
                     "collected_at": self._format_datetime(article['collected_at']),
                     "content_hash": article['content_hash'],
                     "image_url": article.get('image_url'),
+                    "language": article.get('language', 'unknown'),
                     "analysis_status": 'not_analyzed'
                 }
                 
@@ -309,6 +405,7 @@ class RSSCollectionService:
         processing_time = (end_time - start_time).total_seconds()
         
         stats = {
+            "timestamp": end_time.isoformat(),
             "feeds_processed": len(self.sources),
             "total_articles_found": total_articles_found,
             "new_articles_stored": new_articles_stored,
@@ -329,7 +426,8 @@ class RSSCollectionService:
             logger.info(f"Cleaned up {len(result.data)} old RSS articles")
     
     async def get_news_feed(self, page: int = 1, limit: int = 20, rss_only: bool = False, 
-                           source: Optional[str] = None, search: Optional[str] = None) -> Dict[str, Any]:
+                           source: Optional[str] = None, search: Optional[str] = None, 
+                           language: Optional[str] = None) -> Dict[str, Any]:
         """Get paginated news feed."""
         offset = (page - 1) * limit
         
@@ -338,7 +436,7 @@ class RSSCollectionService:
             # Build query
             query = database_service.supabase.table("articles").select(
                 "id, title, content, url, source_name, author, published_at, "
-                "summary, source_url, collected_at, image_url, "
+                "summary, source_url, collected_at, image_url, language, "
                 "analysis_status, analysis_id, created_at, updated_at"
             )
             
@@ -349,11 +447,29 @@ class RSSCollectionService:
             if source:
                 query = query.ilike("source_name", f"%{source}%")
             
+            if language:
+                query = query.eq("language", language)
+            
             if search:
                 query = query.or_(f"title.ilike.%{search}%,summary.ilike.%{search}%")
             
-            # Get total count first - use a simpler approach
-            count_result = database_service.supabase.table("articles").select("*", count="exact").execute()
+            # Get total count with same filters applied
+            count_query = database_service.supabase.table("articles").select("*", count="exact")
+            
+            # Apply same filters to count query
+            if rss_only:
+                count_query = count_query.not_.is_("collected_at", "null")
+            
+            if source:
+                count_query = count_query.ilike("source_name", f"%{source}%")
+            
+            if language:
+                count_query = count_query.eq("language", language)
+            
+            if search:
+                count_query = count_query.or_(f"title.ilike.%{search}%,summary.ilike.%{search}%")
+            
+            count_result = count_query.execute()
             total_articles = count_result.count if hasattr(count_result, 'count') else len(count_result.data)
             
             # Get articles with pagination - order by most recent first
@@ -380,6 +496,7 @@ class RSSCollectionService:
                 "source_url": article['source_url'],
                 "collected_at": self._format_datetime(article['collected_at']),
                 "image_url": article['image_url'],
+                "language": article.get('language', 'unknown'),
                 "analysis_status": article['analysis_status'],
                 "analysis_id": str(article['analysis_id']) if article['analysis_id'] else None,
                 "created_at": self._format_datetime(article['created_at']),
